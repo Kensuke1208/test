@@ -1,0 +1,27 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "発音練習を通じてリスニング力を伸ばす英語学習 Web アプリ。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kensuke1208/test.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Kensuke1208/test/issues"
+  },
+  "homepage": "https://github.com/Kensuke1208/test#readme",
+  "devDependencies": {
+    "supabase": "^2.84.6"
+  }
+}
