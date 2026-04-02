@@ -171,6 +171,7 @@
 | カラム | 型 | NULL | デフォルト | 説明 |
 |--------|-----|------|-----------|------|
 | id | uuid | NO | gen_random_uuid() | PK |
+| account_id | uuid | NO | - | FK → accounts.id（RLS 用。learners.account_id の非正規化） |
 | learner_id | uuid | NO | - | FK → learners.id（練習した学習者） |
 | word_id | uuid | NO | - | FK → words.id（対象の単語） |
 | sentence_id | uuid | YES | - | FK → sentences.id（例文練習時のみ） |
@@ -184,6 +185,7 @@
 ### 制約
 
 - PK: `id`
+- FK: `account_id` → `accounts.id` (ON DELETE CASCADE)
 - FK: `learner_id` → `learners.id` (ON DELETE CASCADE)
 - FK: `word_id` → `words.id` (ON DELETE CASCADE)
 - FK: `sentence_id` → `sentences.id` (ON DELETE CASCADE)
@@ -203,7 +205,7 @@
 
 | 操作 | 対象 | 条件 |
 |------|------|------|
-| SELECT | アカウント所有者 | learners 経由で `learners.account_id = auth.uid()` |
+| SELECT | アカウント所有者 | `account_id = auth.uid()`（非正規化カラムで JOIN 不要） |
 | INSERT | - | Edge Function 経由で作成（score-pronunciation） |
 | UPDATE | - | 許可しない |
 | DELETE | - | 許可しない |
@@ -226,6 +228,7 @@
 ### 設計判断
 
 - updated_at を持たない理由：試行は作成後に変更されないため
+- account_id を非正規化する理由：RLS ポリシーで learners テーブルへの JOIN を避け、`account_id = auth.uid()` の単純な比較でインデックスが効くようにする。Supabase 公式推奨パターン
 - learner_id で紐付ける理由：練習履歴は学習者プロフィール単位で分離するため
 - word_id を必須にする理由：例文練習でも「どの単語の練習か」を常に追跡するため（合格判定、苦手音素の集計に必要）
 - is_passed をアプリ側で計算して保存する理由：閾値が変わった場合でも過去の合格判定は保持される。集計クエリも単純になる

@@ -72,28 +72,28 @@ insert into public.sentences (id, word_id, text, meaning_ja, display_order) valu
 -- ============================================
 
 -- apple: word practice passed
-insert into public.attempts (learner_id, word_id, target_type, score, is_passed, phonemes) values
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'word', 85, true,
+insert into public.attempts (account_id, learner_id, word_id, target_type, score, is_passed, phonemes) values
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'word', 85, true,
    '[{"word":"apple","phone":"ae","quality_score":90,"sound_most_like":"ae","is_correct":true},
      {"word":"apple","phone":"p","quality_score":85,"sound_most_like":"p","is_correct":true},
      {"word":"apple","phone":"l","quality_score":40,"sound_most_like":"r","is_correct":false}]'::jsonb);
 
 -- apple: sentence 1 passed
-insert into public.attempts (learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes) values
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000001', 'sentence', 80, 85, true,
+insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes) values
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000001', 'sentence', 80, 85, true,
    '[{"word":"apple","phone":"ae","quality_score":85,"sound_most_like":"ae","is_correct":true}]'::jsonb);
 
 -- apple: sentence 2 NOT attempted (should make all_sentences_passed = false)
 
 -- river: word practice passed
-insert into public.attempts (learner_id, word_id, target_type, score, is_passed, phonemes) values
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000002', 'word', 90, true,
+insert into public.attempts (account_id, learner_id, word_id, target_type, score, is_passed, phonemes) values
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000002', 'word', 90, true,
    '[{"word":"river","phone":"r","quality_score":50,"sound_most_like":"l","is_correct":false},
      {"word":"river","phone":"r","quality_score":45,"sound_most_like":"l","is_correct":false}]'::jsonb);
 
 -- river: sentence 1 passed
-insert into public.attempts (learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes) values
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000002', 'ff000000-0000-0000-0000-000000000003', 'sentence', 82, 88, true,
+insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes) values
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000002', 'ff000000-0000-0000-0000-000000000003', 'sentence', 82, 88, true,
    '[{"word":"river","phone":"r","quality_score":80,"sound_most_like":"r","is_correct":true}]'::jsonb);
 
 -- ============================================
@@ -194,8 +194,8 @@ select is(
 );
 
 -- Complete apple by passing sentence 2
-insert into public.attempts (learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes) values
-  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000002', 'sentence', 85, 90, true,
+insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes) values
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000002', 'sentence', 85, 90, true,
    '[{"word":"apple","phone":"ae","quality_score":90,"sound_most_like":"ae","is_correct":true}]'::jsonb);
 
 -- Test 12: apple is now mastered (all sentences passed)

@@ -65,12 +65,12 @@ insert into public.sentences (id, word_id, text, meaning_ja, display_order)
 values ('ff000000-0000-0000-0000-000000000001', 'ee000000-0000-0000-0000-000000000001', 'I eat an apple.', 'りんごを食べます。', 1);
 
 -- attempts (inserted as superuser, simulating service_role)
-insert into public.attempts (id, learner_id, word_id, target_type, score, is_passed, phonemes) values
-  ('a0000000-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'word', 85, true,
+insert into public.attempts (id, account_id, learner_id, word_id, target_type, score, is_passed, phonemes) values
+  ('a0000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'word', 85, true,
    '[{"word": "apple", "phone": "ae", "quality_score": 90, "sound_most_like": "ae", "is_correct": true}]'::jsonb);
 
-insert into public.attempts (id, learner_id, word_id, target_type, score, is_passed, phonemes) values
-  ('a0000000-0000-0000-0000-000000000002', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'ee000000-0000-0000-0000-000000000001', 'word', 60, false,
+insert into public.attempts (id, account_id, learner_id, word_id, target_type, score, is_passed, phonemes) values
+  ('a0000000-0000-0000-0000-000000000002', '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'ee000000-0000-0000-0000-000000000001', 'word', 60, false,
    '[{"word": "apple", "phone": "ae", "quality_score": 60, "sound_most_like": "ah", "is_correct": false}]'::jsonb);
 
 -- ============================================
@@ -117,8 +117,8 @@ set local role authenticated;
 set local request.jwt.claims to '{"sub": "11111111-1111-1111-1111-111111111111"}';
 
 select throws_ok(
-  $$insert into public.attempts (learner_id, word_id, target_type, score, is_passed, phonemes)
-    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'word', 90, true, '[]'::jsonb)$$,
+  $$insert into public.attempts (account_id, learner_id, word_id, target_type, score, is_passed, phonemes)
+    values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'word', 90, true, '[]'::jsonb)$$,
   '42501',
   null,
   'authenticated user cannot INSERT attempts directly'
@@ -132,8 +132,8 @@ reset role;
 
 -- Test 5: target_type must be 'word' or 'sentence'
 select throws_ok(
-  $$insert into public.attempts (learner_id, word_id, target_type, score, is_passed, phonemes)
-    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'invalid', 80, true, '[]'::jsonb)$$,
+  $$insert into public.attempts (account_id, learner_id, word_id, target_type, score, is_passed, phonemes)
+    values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'invalid', 80, true, '[]'::jsonb)$$,
   '23514',
   null,
   'target_type must be word or sentence'
@@ -141,8 +141,8 @@ select throws_ok(
 
 -- Test 6: sentence practice requires sentence_id
 select throws_ok(
-  $$insert into public.attempts (learner_id, word_id, target_type, score, is_passed, phonemes)
-    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'sentence', 80, true, '[]'::jsonb)$$,
+  $$insert into public.attempts (account_id, learner_id, word_id, target_type, score, is_passed, phonemes)
+    values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'sentence', 80, true, '[]'::jsonb)$$,
   '23514',
   null,
   'sentence practice requires sentence_id'
@@ -150,8 +150,8 @@ select throws_ok(
 
 -- Test 7: word practice must not have target_word_score
 select throws_ok(
-  $$insert into public.attempts (learner_id, word_id, target_type, score, target_word_score, is_passed, phonemes)
-    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'word', 80, 85, true, '[]'::jsonb)$$,
+  $$insert into public.attempts (account_id, learner_id, word_id, target_type, score, target_word_score, is_passed, phonemes)
+    values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'word', 80, 85, true, '[]'::jsonb)$$,
   '23514',
   null,
   'word practice must not have target_word_score'
@@ -159,8 +159,8 @@ select throws_ok(
 
 -- Test 8: valid sentence practice with sentence_id and target_word_score
 select lives_ok(
-  $$insert into public.attempts (learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes)
-    values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000001', 'sentence', 80, 85, true, '[]'::jsonb)$$,
+  $$insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes)
+    values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000001', 'sentence', 80, 85, true, '[]'::jsonb)$$,
   'valid sentence practice with sentence_id and target_word_score'
 );
 

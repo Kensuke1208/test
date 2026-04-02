@@ -56,12 +56,13 @@ Content-Type: multipart/form-data
    - 例文練習: `sentences.text`（例: "I eat an apple every morning."）
 6. Speechace API を呼び出し:
    - エンドポイント: `POST https://api.speechace.co/api/scoring/text/v9/json`
-   - パラメータ: `key`, `dialect=en-us`, `text`, `user_audio_file=audio`, `user_id`
+   - パラメータ: `key`, `dialect=en-us`, `text`, `user_audio_file=audio`, `user_id=learner_id`
    - `include_fluency`, `include_intonation` は送らない
 7. レスポンスを処理:
    - `speechace_score.pronunciation` → score
    - 例文練習時: `word_score_list` から対象単語の `quality_score` → target_word_score
-   - `word_score_list[].phone_score_list` を全単語分展開・結合し、各音素に `word` フィールドを付与して phonemes JSONB を構築（例文練習時も全単語の音素を含む）
+   - `word_score_list[].phone_score_list` を全単語分展開・結合し、各音素に `word` フィールドと `is_correct` フィールドを付与して phonemes JSONB を構築（例文練習時も全単語の音素を含む）
+   - `is_correct` の算出: `phone === sound_most_like`（質問された音素と実際に発した音素が一致するか）。quality_score ベースではない
 8. 合格判定:
    - 単語練習: `score >= 閾値`
    - 例文練習: `score >= 閾値 AND target_word_score >= 閾値`
@@ -133,4 +134,4 @@ Speechace API の `word_score_list` から対象単語を特定する方法:
 - Edge Function で合格判定を行う理由: フロント側で判定すると閾値の改ざんが可能。サーバー側で判定し is_passed を記録する
 - 音素データを JSONB で保持する理由: 1回の発音で10-50件の音素を正規化テーブルに書くのはオーバーヘッドが大きい。即時フィードバックは JSONB から直接読み、集計は v_learner_phoneme_stats ビューで行う
 - 例文練習時も全単語の音素を JSONB に含める理由: 対象単語以外でも苦手音素は検出される（例: "morning" の /r/）。集計精度を高めるため
-- `user_id` を Speechace API に送る理由: Speechace 側でユーザーごとの学習進捗を追跡可能にするため（将来的な活用を想定）
+- `user_id` に learner_id を送る理由: Speechace 側で学習者単位の進捗を追跡可能にするため。auth user ID ではなく learner_id を使うことで、アカウント内の学習者を区別できる

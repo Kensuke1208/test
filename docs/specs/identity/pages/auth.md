@@ -82,7 +82,7 @@ SignupPage
 
 - `supabase.auth.signUp({ email, password, options: { data: { display_name } } })` で作成
 - accounts レコードは on_auth_user_created トリガーで自動作成される
-- メール確認が有効なら確認メッセージ表示、無効なら /learners へ遷移
+- プロトタイプではメール確認を無効にする（小 5-6 の親が離脱するリスクを避ける）。サインアップ後は即座に /learners へ遷移
 
 **Validation**:
 

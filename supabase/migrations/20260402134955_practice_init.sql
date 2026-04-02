@@ -1,6 +1,7 @@
 
   create table "public"."attempts" (
     "id" uuid not null default gen_random_uuid(),
+    "account_id" uuid not null,
     "learner_id" uuid not null,
     "word_id" uuid not null,
     "sentence_id" uuid,
@@ -59,6 +60,8 @@ alter table "public"."sentences" enable row level security;
 
 alter table "public"."words" enable row level security;
 
+CREATE INDEX attempts_account_id_idx ON public.attempts USING btree (account_id);
+
 CREATE INDEX attempts_learner_id_idx ON public.attempts USING btree (learner_id);
 
 CREATE INDEX attempts_learner_sentence_idx ON public.attempts USING btree (learner_id, sentence_id) WHERE (sentence_id IS NOT NULL);
@@ -86,6 +89,10 @@ alter table "public"."modules" add constraint "modules_pkey" PRIMARY KEY using i
 alter table "public"."sentences" add constraint "sentences_pkey" PRIMARY KEY using index "sentences_pkey";
 
 alter table "public"."words" add constraint "words_pkey" PRIMARY KEY using index "words_pkey";
+
+alter table "public"."attempts" add constraint "attempts_account_id_fkey" FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE CASCADE not valid;
+
+alter table "public"."attempts" validate constraint "attempts_account_id_fkey";
 
 alter table "public"."attempts" add constraint "attempts_learner_id_fkey" FOREIGN KEY (learner_id) REFERENCES public.learners(id) ON DELETE CASCADE not valid;
 
@@ -402,9 +409,7 @@ with check (true);
   as permissive
   for select
   to authenticated
-using ((learner_id IN ( SELECT learners.id
-   FROM public.learners
-  WHERE (learners.account_id = auth.uid()))));
+using ((account_id = auth.uid()));
 
 
 

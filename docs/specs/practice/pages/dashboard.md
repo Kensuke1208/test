@@ -123,6 +123,7 @@ ParentDashboardPage
 - 今週の練習回数: weeklyAttempts の件数
 - 最後に練習した日: lastAttempt.created_at を JST で日付表示
 - 「今週」の定義: JST 月曜 00:00 から
+- タイムゾーン処理: DB の `created_at` は UTC（timestamptz）。クエリで `AT TIME ZONE 'Asia/Tokyo'` を使って JST の週境界を算出する
 
 **成長の表示**:
 - moduleProgress の is_completed = true のモジュール数を表示
