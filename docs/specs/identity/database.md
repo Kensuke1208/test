@@ -17,13 +17,15 @@
 
 ## 3. 共通関数
 
+internal スキーマおよび共通関数は `supabase/schemas/00_common.sql` で定義。全ドメインで共有する。
+
 ### internal.handle_updated_at()
 
 updated_at を自動更新するトリガー関数。
 
 - スキーマ: internal
-- 権限: SECURITY DEFINER
-- 動作: `NEW.updated_at = now()` を設定して RETURN NEW
+- 権限: SECURITY INVOKER
+- 動作: `NEW.updated_at = clock_timestamp()` を設定して RETURN NEW
 - 使用: 全テーブルの BEFORE UPDATE トリガー
 
 ## 4. accounts

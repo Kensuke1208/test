@@ -95,10 +95,12 @@ ModuleDetailPage
 
 **MasteryStatus の判定**:
 
+v_word_mastery は未挑戦の単語を返さないため、フロント側で words を LEFT JOIN して補完する。
+
 | 表示 | 条件 |
 |------|------|
-| 未挑戦 | v_word_mastery にレコードなし |
-| 練習中 | レコードあり、is_mastered = false |
+| 未挑戦 | words にはあるが wordMastery に該当レコードなし |
+| 練習中 | wordMastery にレコードあり、is_mastered = false |
 | 合格 | is_mastered = true |
 
 ### Interactions
@@ -224,7 +226,6 @@ stateDiagram-v2
 | ケース | 動作 |
 |--------|------|
 | wordId が存在しない | /modules/:moduleId へリダイレクト |
-| 例文が 0 件 | 単語練習のみで合格判定 |
 | マイク権限が拒否された | 「マイクのしようをきょかしてね」メッセージ + 設定方法のガイド |
 | 録音中にページ離脱 | MediaRecorder を停止、録音データを破棄 |
 | Edge Function タイムアウト | 「うまくいかなかったよ。もういちどためしてね」、Ready 状態に戻る |
