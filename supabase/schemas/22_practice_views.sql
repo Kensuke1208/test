@@ -143,32 +143,14 @@ mastered_count as (
   left join public.v_word_mastery vm
     on vm.learner_id = al.learner_id and vm.module_id = mw.module_id
   group by al.learner_id, mw.module_id, mw.total_words
-),
-completion_time as (
-  select
-    a.learner_id,
-    w.module_id,
-    max(a.created_at) as completed_at
-  from public.attempts a
-  join public.words w on w.id = a.word_id
-  join public.v_word_mastery vm
-    on vm.learner_id = a.learner_id and vm.word_id = a.word_id
-  where vm.is_mastered = true and a.is_passed = true
-  group by a.learner_id, w.module_id
 )
 select
   mc.learner_id,
   mc.module_id,
   mc.total_words::integer,
   mc.mastered_words::integer,
-  mc.mastered_words = mc.total_words as is_completed,
-  case
-    when mc.mastered_words = mc.total_words then ct.completed_at
-    else null
-  end as completed_at
-from mastered_count mc
-left join completion_time ct
-  on ct.learner_id = mc.learner_id and ct.module_id = mc.module_id;
+  mc.mastered_words = mc.total_words as is_completed
+from mastered_count mc;
 
 -- alter view public.v_module_progress set (security_invoker = true);
 -- Note: security_invoker is not captured by db diff. Applied via manual migration.

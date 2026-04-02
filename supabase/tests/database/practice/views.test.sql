@@ -20,7 +20,7 @@ Run:
 
 begin;
 
-select plan(19);
+select plan(17);
 
 -- ============================================
 -- Setup: users, learners, content
@@ -193,20 +193,12 @@ select is(
   'is_completed is false (1/2 words mastered)'
 );
 
--- Test 12: completed_at is null (not completed)
-select is(
-  (select completed_at from public.v_module_progress
-   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and module_id = 'dd000000-0000-0000-0000-000000000001'),
-  null::timestamptz,
-  'completed_at is null when not completed'
-);
-
 -- Complete apple by passing sentence 2
 insert into public.attempts (learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes) values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000002', 'sentence', 85, 90, true,
    '[{"word":"apple","phone":"ae","quality_score":90,"sound_most_like":"ae","is_correct":true}]'::jsonb);
 
--- Test 13: apple is now mastered (all sentences passed)
+-- Test 12: apple is now mastered (all sentences passed)
 select is(
   (select is_mastered from public.v_word_mastery
    where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000001'),
@@ -214,19 +206,12 @@ select is(
   'apple is_mastered after completing sentence 2'
 );
 
--- Test 14: module is now completed (2/2 words mastered)
+-- Test 13: module is now completed (2/2 words mastered)
 select is(
   (select is_completed from public.v_module_progress
    where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and module_id = 'dd000000-0000-0000-0000-000000000001'),
   true,
   'module is_completed when all words mastered'
-);
-
--- Test 15: completed_at is not null when completed
-select ok(
-  (select completed_at is not null from public.v_module_progress
-   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and module_id = 'dd000000-0000-0000-0000-000000000001'),
-  'completed_at is not null when completed'
 );
 
 -- ============================================

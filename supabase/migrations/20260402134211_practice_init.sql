@@ -210,27 +210,13 @@ create or replace view "public"."v_module_progress" as  WITH active_learners AS 
              CROSS JOIN module_words mw)
              LEFT JOIN public.v_word_mastery vm ON (((vm.learner_id = al.learner_id) AND (vm.module_id = mw.module_id))))
           GROUP BY al.learner_id, mw.module_id, mw.total_words
-        ), completion_time AS (
-         SELECT a.learner_id,
-            w.module_id,
-            max(a.created_at) AS completed_at
-           FROM ((public.attempts a
-             JOIN public.words w ON ((w.id = a.word_id)))
-             JOIN public.v_word_mastery vm ON (((vm.learner_id = a.learner_id) AND (vm.word_id = a.word_id))))
-          WHERE ((vm.is_mastered = true) AND (a.is_passed = true))
-          GROUP BY a.learner_id, w.module_id
         )
- SELECT mc.learner_id,
-    mc.module_id,
-    (mc.total_words)::integer AS total_words,
-    (mc.mastered_words)::integer AS mastered_words,
-    (mc.mastered_words = mc.total_words) AS is_completed,
-        CASE
-            WHEN (mc.mastered_words = mc.total_words) THEN ct.completed_at
-            ELSE NULL::timestamp with time zone
-        END AS completed_at
-   FROM (mastered_count mc
-     LEFT JOIN completion_time ct ON (((ct.learner_id = mc.learner_id) AND (ct.module_id = mc.module_id))));
+ SELECT learner_id,
+    module_id,
+    (total_words)::integer AS total_words,
+    (mastered_words)::integer AS mastered_words,
+    (mastered_words = total_words) AS is_completed
+   FROM mastered_count mc;
 
 
 grant delete on table "public"."attempts" to "anon";

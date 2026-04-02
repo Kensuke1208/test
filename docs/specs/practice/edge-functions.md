@@ -38,12 +38,19 @@ Content-Type: multipart/form-data
 | word_id | uuid | Yes | 対象の単語 ID |
 | sentence_id | uuid | No | 例文 ID（例文練習時のみ） |
 
+### Supabase クライアント
+
+2 つのクライアントを使い分ける:
+
+- **ユーザー JWT クライアント**: リクエストの JWT で生成。RLS が効くため、learner/word/sentence の読み取りと権限チェックに使用
+- **service_role クライアント**: 環境変数の service_role キーで生成。RLS をバイパスし、attempts の INSERT に使用（attempts には authenticated 向けの INSERT ポリシーがないため）
+
 ### ロジック
 
 1. JWT からユーザー ID を取得、認証確認
-2. learner_id で learners テーブルから学習者を取得（存在確認、`account_id = auth.uid()` で権限確認）
-3. word_id で words テーブルから単語を取得（存在確認）
-4. sentence_id がある場合は sentences テーブルから例文を取得（存在確認、word_id との整合性確認）
+2. **ユーザー JWT クライアント**で learner_id の learners を取得（RLS で `account_id = auth.uid()` が自動チェックされる。見つからなければ 403）
+3. **ユーザー JWT クライアント**で word_id の words を取得（存在確認）
+4. sentence_id がある場合は **ユーザー JWT クライアント**で sentences を取得（存在確認、word_id との整合性確認）
 5. 評価対象テキストを決定:
    - 単語練習: `words.text`（例: "apple"）
    - 例文練習: `sentences.text`（例: "I eat an apple every morning."）
@@ -58,7 +65,7 @@ Content-Type: multipart/form-data
 8. 合格判定:
    - 単語練習: `score >= 閾値`
    - 例文練習: `score >= 閾値 AND target_word_score >= 閾値`
-9. DB に保存（トランザクション）:
+9. **service_role クライアント**で DB に保存:
    - attempts に 1 レコード INSERT（phonemes JSONB を含む）
 10. フロントにレスポンスを返す
 
@@ -121,6 +128,7 @@ Speechace API の `word_score_list` から対象単語を特定する方法:
 
 - 合格閾値を環境変数にする理由: 実ユーザーテストで調整する前提。コード変更なしで閾値を変更可能
 - `include_fluency`, `include_intonation` を送らない理由: プロトタイプでは音素の正確さのみで評価する（product.md の評価設計に基づく）
+- 2 クライアント方式の理由: 読み取りはユーザー JWT クライアントで RLS による権限チェックを活用し、書き込みは service_role クライアントで RLS をバイパスする。attempts に authenticated 向け INSERT ポリシーを作ると、ユーザーが任意のスコアを書き込めるリスクがある
 - attempts のみ INSERT する理由: 音素の集計は v_learner_phoneme_stats ビューで行うため、Edge Function での同期更新が不要
 - Edge Function で合格判定を行う理由: フロント側で判定すると閾値の改ざんが可能。サーバー側で判定し is_passed を記録する
 - 音素データを JSONB で保持する理由: 1回の発音で10-50件の音素を正規化テーブルに書くのはオーバーヘッドが大きい。即時フィードバックは JSONB から直接読み、集計は v_learner_phoneme_stats ビューで行う

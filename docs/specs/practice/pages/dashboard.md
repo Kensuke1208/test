@@ -125,9 +125,9 @@ ParentDashboardPage
 - 「今週」の定義: JST 月曜 00:00 から
 
 **成長の表示**:
-- moduleProgress の completed_at を月ごとに集計
-- 表示: 「2月: 1 モジュール、3月: 3 モジュール、4月: 0 モジュール」
-- completed_at が NULL（未完了）のモジュールはカウントしない
+- moduleProgress の is_completed = true のモジュール数を表示
+- 月別の推移が必要な場合は、attempts の created_at からアプリ側で算出する（v_module_progress には completed_at がない）
+- プロトタイプでは累計のモジュール合格数のみ表示する
 
 **苦手ポイントの表示**:
 - phonemeStats から accuracy が低い音素を上位 3 つ取得
