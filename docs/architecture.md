@@ -19,9 +19,9 @@
 
 **Supabase Edge Functions** — Speechace API はデフォルトで CORS 無効。フロントエンドから直接呼べないため、バックエンドプロキシが必須。Edge Function に音声ファイルを POST し、そこから Speechace API を叩いて結果を返す。
 
-**Supabase Auth** — 生徒・講師・保護者の 3 ロールが必要。Supabase Auth の Row Level Security（RLS）と組み合わせることで、「生徒は自分のデータのみ閲覧可」「講師は担当生徒全員のデータを閲覧可」「保護者は自分の子供のデータを閲覧可」を DB 層で強制できる。
+**Supabase Auth** — Auth アカウントの下に学習者プロフィールがぶら下がる構造（Netflix 方式）。RLS で「アカウント所有者は自分の学習者のデータのみ閲覧可」を DB 層で強制する。
 
-**Supabase PostgreSQL** — 管理画面で必要な集計クエリ（生徒ごとの正答率推移、苦手音素のランキング）は SQL の標準機能で対応可能。RLS によるアクセス制御との相性が良い。
+**Supabase PostgreSQL** — 苦手音素の集計や進捗の可視化は SQL のビューで対応可能。RLS によるアクセス制御との相性が良い。
 
 **MediaRecorder API** — ブラウザ標準の音声録音 API。追加ライブラリ不要。WebM または WAV 形式で取得し、Edge Function 経由で Speechace API に送信する。
 
@@ -45,33 +45,33 @@
 │  ┌─────────────┐  ┌─────────────────────┐ │
 │  │    Auth     │  │    PostgreSQL       │ │
 │  │    (RLS)    │  │    profiles         │ │
-│  │             │  │    classrooms       │ │
-│  └─────────────┘  │    attempts         │ │
-│                   │    phoneme_scores   │ │
+│  │             │  │    learners         │ │
+│  └─────────────┘  │    modules / words  │ │
+│                   │    sentences        │ │
+│                   │    attempts (JSONB) │ │
 │                   └─────────────────────┘ │
 └───────────────────────────────────────────┘
 ```
 
 ### リクエストフロー（発音評価）
 
-1. 生徒がマイクで発音
+1. 学習者がマイクで発音
 2. MediaRecorder で音声を取得（WebM / WAV）
-3. Edge Function に POST（音声 + 対象テキスト）
+3. Edge Function に POST（音声 + learner_id + word_id）
 4. Edge Function が Speechace API を呼び出し
 5. Speechace がスコア（音素・音節・単語レベル）を返却
-6. Edge Function がスコアを整形してフロントに返却
-7. フロントがフィードバックを表示（色分け + 改善ポイント）
-8. 練習結果を Supabase DB に保存
+6. Edge Function が合格判定し、attempt + phonemes（JSONB）を DB に保存
+7. フロントにフィードバックを返却（色分け + 改善ポイント）
 
 ## データモデル
 
-7 テーブル（プロトタイプ）。詳細は specs/ 配下を参照。
+5 テーブル + 3 ビュー（プロトタイプ）。詳細は specs/ 配下を参照。
 
-- [specs/identity/](specs/identity/database.md) - profiles, parent_children
-- [specs/practice/](specs/practice/database.md) - modules, words, sentences, attempts, phoneme_scores
+- [specs/identity/](specs/identity/database.md) - profiles, learners
+- [specs/practice/](specs/practice/database.md) - modules, words, sentences, attempts + 3 ビュー
 - [specs/classroom/](specs/classroom/database.md) - スコープ外
 
-プロトタイプのロールは student / parent の 2 種類。RLS で「生徒は自分のデータのみ」「親は自分の子供のデータ」を強制する。
+Auth アカウントの下に学習者プロフィール（learners）がぶら下がる構造。RLS で「アカウント所有者は自分の学習者のデータのみ」を強制する。
 
 ## Edge Functions
 
