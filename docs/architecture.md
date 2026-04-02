@@ -50,7 +50,7 @@
 │  Supabase                                 │
 │  ┌─────────────┐  ┌─────────────────────┐ │
 │  │    Auth     │  │    PostgreSQL       │ │
-│  │    (RLS)    │  │    profiles         │ │
+│  │    (RLS)    │  │    accounts         │ │
 │  │             │  │    learners         │ │
 │  └─────────────┘  │    modules / words  │ │
 │                   │    sentences        │ │
@@ -73,7 +73,7 @@
 
 5 テーブル + 3 ビュー（プロトタイプ）。詳細は specs/ 配下を参照。
 
-- [specs/identity/](specs/identity/database.md) - profiles, learners
+- [specs/identity/](specs/identity/database.md) - accounts, learners
 - [specs/practice/](specs/practice/database.md) - modules, words, sentences, attempts + 3 ビュー
 - [specs/classroom/](specs/classroom/database.md) - スコープ外
 
