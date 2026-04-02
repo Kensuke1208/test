@@ -54,13 +54,12 @@ Content-Type: multipart/form-data
 7. レスポンスを処理:
    - `speechace_score.pronunciation` → score
    - 例文練習時: `word_score_list` から対象単語の `quality_score` → target_word_score
-   - `phone_score_list` → phoneme_scores レコード群（例文練習時も全単語の音素を保存する）
+   - `word_score_list[].phone_score_list` を全単語分展開・結合し、各音素に `word` フィールドを付与して phonemes JSONB を構築（例文練習時も全単語の音素を含む）
 8. 合格判定:
    - 単語練習: `score >= 閾値`
    - 例文練習: `score >= 閾値 AND target_word_score >= 閾値`
 9. DB に保存（トランザクション）:
-   - attempts に 1 レコード INSERT
-   - phoneme_scores に音素スコアを全件 INSERT
+   - attempts に 1 レコード INSERT（phonemes JSONB を含む）
 10. フロントにレスポンスを返す
 
 ### 例文中の対象単語の特定
@@ -81,12 +80,14 @@ Speechace API の `word_score_list` から対象単語を特定する方法:
   "is_passed": true,
   "phonemes": [
     {
+      "word": "river",
       "phone": "r",
       "quality_score": 70,
       "sound_most_like": "l",
       "is_correct": false
     },
     {
+      "word": "river",
       "phone": "ih",
       "quality_score": 90,
       "sound_most_like": "ih",
@@ -120,8 +121,8 @@ Speechace API の `word_score_list` から対象単語を特定する方法:
 
 - 合格閾値を環境変数にする理由: 実ユーザーテストで調整する前提。コード変更なしで閾値を変更可能
 - `include_fluency`, `include_intonation` を送らない理由: プロトタイプでは音素の正確さのみで評価する（product.md の評価設計に基づく）
-- attempts と phoneme_scores を同時に保存する理由: 1 回の発音に対する評価結果を一貫して記録するため
+- attempts のみ INSERT する理由: 音素の集計は v_learner_phoneme_stats ビューで行うため、Edge Function での同期更新が不要
 - Edge Function で合格判定を行う理由: フロント側で判定すると閾値の改ざんが可能。サーバー側で判定し is_passed を記録する
-- phoneme_scores を全件保存する理由: 苦手音素の集計（生徒ダッシュボード、親向けサマリー）に使用するため
-- 例文練習時も全単語の音素を保存する理由: 対象単語以外でも苦手音素は検出される（例: "morning" の /r/）。集計精度を高めるため
+- 音素データを JSONB で保持する理由: 1回の発音で10-50件の音素を正規化テーブルに書くのはオーバーヘッドが大きい。即時フィードバックは JSONB から直接読み、集計は v_learner_phoneme_stats ビューで行う
+- 例文練習時も全単語の音素を JSONB に含める理由: 対象単語以外でも苦手音素は検出される（例: "morning" の /r/）。集計精度を高めるため
 - `user_id` を Speechace API に送る理由: Speechace 側でユーザーごとの学習進捗を追跡可能にするため（将来的な活用を想定）
