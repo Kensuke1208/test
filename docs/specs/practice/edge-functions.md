@@ -55,7 +55,7 @@ Content-Type: multipart/form-data
    - 単語練習: `words.text`（例: "apple"）
    - 例文練習: `sentences.text`（例: "I eat an apple every morning."）
 6. Speechace API を呼び出し:
-   - エンドポイント: `POST https://api.speechace.co/api/scoring/text/v9/json`
+   - エンドポイント: `POST https://api2.speechace.com/api/scoring/text/v9/json`（AP SouthEast / Singapore）
    - パラメータ: `key`, `dialect=en-us`, `text`, `user_audio_file=audio`, `user_id=learner_id`
    - `include_fluency`, `include_intonation` は送らない
 7. レスポンスを処理:
