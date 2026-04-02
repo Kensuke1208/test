@@ -1,4 +1,4 @@
-# Echora アーキテクチャ仕様
+# Eigo アーキテクチャ仕様
 
 プロトタイプの技術構成。プロダクトの全体像と方針は [product.md](product.md) に記載。
 
@@ -7,7 +7,7 @@
 | 領域 | 技術 |
 |---|---|
 | Frontend | React + TypeScript（Vite） |
-| Hosting | Supabase（Static Hosting or Vercel） |
+| Hosting | Cloudflare Pages |
 | API Proxy | Supabase Edge Functions（Deno） |
 | DB | Supabase PostgreSQL |
 | Auth | Supabase Auth |
@@ -19,7 +19,7 @@
 
 **Supabase Edge Functions** — Speechace API はデフォルトで CORS 無効。フロントエンドから直接呼べないため、バックエンドプロキシが必須。Edge Function に音声ファイルを POST し、そこから Speechace API を叩いて結果を返す。
 
-**Supabase Auth** — 生徒と講師の 2 ロールが必要。Supabase Auth の Row Level Security（RLS）と組み合わせることで、「生徒は自分のデータのみ閲覧可」「講師は担当生徒全員のデータを閲覧可」を DB 層で強制できる。
+**Supabase Auth** — 生徒・講師・保護者の 3 ロールが必要。Supabase Auth の Row Level Security（RLS）と組み合わせることで、「生徒は自分のデータのみ閲覧可」「講師は担当生徒全員のデータを閲覧可」「保護者は自分の子供のデータを閲覧可」を DB 層で強制できる。
 
 **Supabase PostgreSQL** — 管理画面で必要な集計クエリ（生徒ごとの正答率推移、苦手音素のランキング）は SQL の標準機能で対応可能。RLS によるアクセス制御との相性が良い。
 
@@ -71,7 +71,7 @@
 - [specs/classroom/](specs/classroom/database.md) - classrooms, enrollments, assignments, assignment_words
 - [specs/practice/](specs/practice/database.md) - words, attempts, phoneme_scores
 
-ロールは student / instructor の 2 種類。RLS で「生徒は自分のデータのみ」「講師は担当クラスの生徒のデータ」を強制する。
+ロールは student / instructor / parent の 3 種類。RLS で「生徒は自分のデータのみ」「講師は担当クラスの生徒のデータ」「親は自分の子供のデータ」を強制する。
 
 ## Edge Functions
 
