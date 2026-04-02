@@ -7,25 +7,31 @@
 | 領域 | 技術 |
 |---|---|
 | Frontend | React + TypeScript（Vite） |
+| Routing | React Router |
+| Server State | TanStack Query |
+| Client State | Zustand |
+| UI Primitives | Radix UI（unstyled） |
+| Styling | Tailwind CSS |
 | Hosting | Cloudflare Pages |
-| API Proxy | Supabase Edge Functions（Deno） |
-| DB | Supabase PostgreSQL |
-| Auth | Supabase Auth |
+| Backend | Supabase（Auth / PostgreSQL / Edge Functions） |
 | 発音評価 | Speechace Score Text API v9 |
 | 音声録音 | MediaRecorder API（ブラウザ標準） |
-| Styling | Tailwind CSS |
 
 ### 選定理由
 
-**Supabase Edge Functions** — Speechace API はデフォルトで CORS 無効。フロントエンドから直接呼べないため、バックエンドプロキシが必須。Edge Function に音声ファイルを POST し、そこから Speechace API を叩いて結果を返す。
+**React + Vite（SPA）** — SSR 不要（認証の裏側、SEO 不要）。Cloudflare Pages に静的デプロイで最もシンプル。Next.js / Remix は過剰。
+
+**TanStack Query** — Supabase からのデータ取得・キャッシュ・ミューテーションに最適。ダッシュボードのビュー参照もこれで扱う。
+
+**Zustand** — 学習者選択やアプリ全体の設定など、コンポーネントツリーを跨ぐ状態管理。軽量で導入コストが低い。
+
+**Radix UI** — モーダル、ドロップダウン等のアクセシビリティを自前で実装する必要がなくなる。unstyled なので Tailwind で自由にデザインできる。
+
+**Supabase Edge Functions** — Speechace API はデフォルトで CORS 無効。フロントエンドから直接呼べないため、バックエンドプロキシが必須。
 
 **Supabase Auth** — Auth アカウントの下に学習者プロフィールがぶら下がる構造（Netflix 方式）。RLS で「アカウント所有者は自分の学習者のデータのみ閲覧可」を DB 層で強制する。
 
-**Supabase PostgreSQL** — 苦手音素の集計や進捗の可視化は SQL のビューで対応可能。RLS によるアクセス制御との相性が良い。
-
-**MediaRecorder API** — ブラウザ標準の音声録音 API。追加ライブラリ不要。WebM または WAV 形式で取得し、Edge Function 経由で Speechace API に送信する。
-
-**Vite + React** — セットアップが軽量で、TypeScript と Tailwind の統合が容易。
+**MediaRecorder API** — ブラウザ標準の音声録音 API。追加ライブラリ不要。WebM 形式で取得し、Edge Function 経由で Speechace API に送信する。Safari の対応状況は要検証。
 
 ## システム構成図
 
