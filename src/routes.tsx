@@ -10,8 +10,11 @@ import { ModuleDetailPage } from "./pages/ModuleDetailPage";
 import { PracticePage } from "./pages/PracticePage";
 import { LearnerDashboardPage } from "./pages/LearnerDashboardPage";
 import { ParentDashboardPage } from "./pages/ParentDashboardPage";
+import { DevPracticePage } from "./pages/DevPracticePage";
 
 export const router = createBrowserRouter([
+  // Dev route — no auth, direct Speechace API test
+  { path: "/dev/practice", element: <DevPracticePage /> },
   {
     element: <PublicLayout />,
     children: [
