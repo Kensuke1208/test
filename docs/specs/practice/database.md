@@ -18,6 +18,8 @@
 | sentences | 例文（単語に紐づく） |
 | attempts | 練習の試行（1 回の発音） |
 | phoneme_scores | 音素ごとのスコア（attempt に紐づく） |
+| v_word_mastery | 学習者ごとの単語合格状態ビュー |
+| v_module_progress | 学習者ごとのモジュール進捗ビュー |
 
 ## 3. modules
 
@@ -170,7 +172,7 @@
 | カラム | 型 | NULL | デフォルト | 説明 |
 |--------|-----|------|-----------|------|
 | id | uuid | NO | gen_random_uuid() | PK |
-| user_id | uuid | NO | - | FK → profiles.id（練習した生徒） |
+| learner_id | uuid | NO | - | FK → learners.id（練習した学習者） |
 | word_id | uuid | NO | - | FK → words.id（対象の単語） |
 | sentence_id | uuid | YES | - | FK → sentences.id（例文練習時のみ） |
 | target_type | text | NO | - | 'word' / 'sentence' |
@@ -182,7 +184,7 @@
 ### 制約
 
 - PK: `id`
-- FK: `user_id` → `profiles.id` (ON DELETE CASCADE)
+- FK: `learner_id` → `learners.id` (ON DELETE CASCADE)
 - FK: `word_id` → `words.id` (ON DELETE CASCADE)
 - FK: `sentence_id` → `sentences.id` (ON DELETE CASCADE)
 - CHECK: `target_type IN ('word', 'sentence')`
@@ -193,16 +195,15 @@
 
 | 目的 | 対象 | 条件 |
 |------|------|------|
-| ユーザーの練習履歴取得 | user_id | - |
-| 単語ごとの試行一覧 | (user_id, word_id) | - |
-| 例文ごとの試行一覧 | (user_id, sentence_id) | sentence_id IS NOT NULL |
+| 学習者の練習履歴取得 | learner_id | - |
+| 単語ごとの試行一覧 | (learner_id, word_id) | - |
+| 例文ごとの試行一覧 | (learner_id, sentence_id) | sentence_id IS NOT NULL |
 
 ### RLS方針
 
 | 操作 | 対象 | 条件 |
 |------|------|------|
-| SELECT | 本人 | `user_id = auth.uid()` |
-| SELECT | 親 | parent_children 経由で紐づく子供の試行 |
+| SELECT | アカウント所有者 | learners 経由で `learners.account_id = auth.uid()` |
 | INSERT | - | Edge Function 経由で作成（score-pronunciation） |
 | UPDATE | - | 許可しない |
 | DELETE | - | 許可しない |
@@ -210,6 +211,7 @@
 ### 設計判断
 
 - updated_at を持たない理由：試行は作成後に変更されないため
+- learner_id で紐付ける理由：練習履歴は学習者プロフィール単位で分離するため
 - word_id を必須にする理由：例文練習でも「どの単語の練習か」を常に追跡するため（合格判定、苦手音素の集計に必要）
 - is_passed をアプリ側で計算して保存する理由：閾値が変わった場合でも過去の合格判定は保持される。集計クエリも単純になる
 
@@ -250,8 +252,7 @@
 
 | 操作 | 対象 | 条件 |
 |------|------|------|
-| SELECT | 本人 | attempts 経由で `user_id = auth.uid()` |
-| SELECT | 親 | attempts → parent_children 経由 |
+| SELECT | アカウント所有者 | attempts → learners 経由で `learners.account_id = auth.uid()` |
 | INSERT | - | Edge Function 経由で作成（score-pronunciation） |
 | UPDATE | - | 許可しない |
 | DELETE | - | 許可しない |
@@ -260,3 +261,55 @@
 
 - is_correct を保存する理由：`phone != sound_most_like` の計算を毎回行わず、集計クエリを効率化するため
 - stress_level / stress_score を保存しない理由：プロトタイプでは音素の正確さに集中する。将来的に追加可能
+
+## 8. v_word_mastery
+
+学習者ごとの単語合格状態を返すビュー。単語練習の合格と全例文の合格を集計し、単語全体の合格判定を提供する。
+
+### カラム定義
+
+| カラム | 型 | 説明 |
+|--------|-----|------|
+| learner_id | uuid | 学習者 ID |
+| word_id | uuid | 単語 ID |
+| module_id | uuid | モジュール ID |
+| word_passed | boolean | 単語練習が 1 回以上合格しているか |
+| all_sentences_passed | boolean | 全例文が各 1 回以上合格しているか |
+| is_mastered | boolean | 単語の合格（word_passed AND all_sentences_passed） |
+
+### RLS方針
+
+| 操作 | 対象 | 条件 |
+|------|------|------|
+| SELECT | アカウント所有者 | learners 経由で `learners.account_id = auth.uid()` |
+
+### 設計判断
+
+- attempts の is_passed は個々の試行の合否。「単語の合格」は単語練習 + 全例文の合格が必要で、ビューで集計する
+- module_id を含める理由：モジュール合格（全 10 単語の is_mastered = true）の判定に使用する
+- 生徒ダッシュボードのプログレスバー、親向けのモジュール進捗表示の両方がこのビューを参照する
+
+## 9. v_module_progress
+
+学習者ごとのモジュール進捗を返すビュー。v_word_mastery を集計し、モジュール内の合格単語数と合格状態を提供する。
+
+### カラム定義
+
+| カラム | 型 | 説明 |
+|--------|-----|------|
+| learner_id | uuid | 学習者 ID |
+| module_id | uuid | モジュール ID |
+| total_words | integer | モジュール内の総単語数 |
+| mastered_words | integer | 合格済み単語数 |
+| is_completed | boolean | モジュール合格（mastered_words = total_words） |
+
+### RLS方針
+
+| 操作 | 対象 | 条件 |
+|------|------|------|
+| SELECT | アカウント所有者 | learners 経由で `learners.account_id = auth.uid()` |
+
+### 設計判断
+
+- v_word_mastery を集計するビュー：単語合格の定義を v_word_mastery に集約し、モジュール進捗はその上に乗せる
+- 親向けダッシュボードの「成長」指標（月ごとのモジュール進捗）の基礎データとなる
