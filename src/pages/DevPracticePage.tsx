@@ -21,16 +21,15 @@ export function DevPracticePage() {
   const [apiError, setApiError] = useState<string | null>(null);
 
   // When recording stops and we have audio, submit it
-  const stateRef = useRef(state);
-  stateRef.current = state;
+  const handleAudioReady = useRef<((blob: Blob) => void) | null>(null);
 
-  useEffect(() => {
-    if (!audioBlob || stateRef.current !== "recording") return;
+  handleAudioReady.current = (blob: Blob) => {
+    if (state !== "recording") return;
 
     setState("submitting");
     setApiError(null);
 
-    scorePronunciation(audioBlob, TEST_WORD.text)
+    scorePronunciation(blob, TEST_WORD.text)
       .then((result) => {
         setFeedback(result);
         setState("feedback");
@@ -39,6 +38,10 @@ export function DevPracticePage() {
         setApiError(err.message);
         setState("ready");
       });
+  };
+
+  useEffect(() => {
+    if (audioBlob) handleAudioReady.current?.(audioBlob);
   }, [audioBlob]);
 
   const handleRecord = () => {

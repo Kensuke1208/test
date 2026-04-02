@@ -40,8 +40,10 @@ export async function scorePronunciation(
 
   const form = new FormData();
   form.append("text", text);
-  form.append("user_audio_file", audio, "recording.webm");
+  const ext = audio.type?.includes("mp4") ? "mp4" : "webm";
+  form.append("user_audio_file", audio, `recording.${ext}`);
 
+  // TODO: Add user_id=learner_id param when auth is implemented (per spec)
   const params = new URLSearchParams({ key: apiKey, dialect: "en-us" });
   const url = `${apiUrl}?${params.toString()}`;
   const response = await fetch(url, {

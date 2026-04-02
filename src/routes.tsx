@@ -13,7 +13,7 @@ import { ParentDashboardPage } from "./pages/ParentDashboardPage";
 import { DevPracticePage } from "./pages/DevPracticePage";
 
 export const router = createBrowserRouter([
-  // Dev route — no auth, direct Speechace API test
+  // TODO: Remove or guard with import.meta.env.DEV before production
   { path: "/dev/practice", element: <DevPracticePage /> },
   {
     element: <PublicLayout />,

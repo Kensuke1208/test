@@ -4,6 +4,10 @@
  * MVP: Speechace API proxy without auth or DB writes.
  * Accepts audio + text, returns pronunciation score and phoneme feedback.
  *
+ * TODO: Production version should accept learner_id, word_id, sentence_id
+ * instead of raw text, validate via RLS, save attempts to DB, and return
+ * attempt_id + is_passed per edge-functions.md spec.
+ *
  * @see docs/specs/practice/edge-functions.md
  */
 
@@ -14,6 +18,7 @@ import { errors } from "../_shared/response.ts";
 
 const app = new Hono().basePath("/score-pronunciation");
 
+// TODO: Restrict origin in production
 app.use("*", cors());
 
 /**
