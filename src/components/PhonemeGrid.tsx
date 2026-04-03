@@ -5,17 +5,15 @@ interface PhonemeGridProps {
   score: number;
 }
 
-function phonemeColor(score: number): string {
-  if (score >= 80) return "bg-green-100 text-green-800 border-green-300";
-  if (score >= 60) return "bg-yellow-100 text-yellow-800 border-yellow-300";
-  return "bg-red-100 text-red-800 border-red-300";
+function phonemeStyle(score: number): string {
+  if (score >= 80) return "bg-mint-100 text-mint-800 border-mint-300 shadow-mint-200/50";
+  if (score >= 60) return "bg-amber-50 text-amber-800 border-amber-300 shadow-amber-200/50";
+  return "bg-red-50 text-red-700 border-red-300 shadow-red-200/50";
 }
 
 export function PhonemeGrid({ phonemes, score }: PhonemeGridProps) {
-  // For very low scores, hide detailed phoneme grid
   if (score < 60) return null;
 
-  // Group phonemes by word, preserve natural order
   const grouped = new Map<string, Phoneme[]>();
   for (const p of phonemes) {
     const list = grouped.get(p.word) ?? [];
@@ -24,24 +22,25 @@ export function PhonemeGrid({ phonemes, score }: PhonemeGridProps) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 animate-slide-up">
       {[...grouped.entries()].map(([word, phones], wordIdx) => (
-          <div key={`${word}-${wordIdx}`}>
-            <div className="text-sm text-gray-500 mb-1">{word}</div>
-            <div className="flex gap-1 flex-wrap">
-              {phones.map((p, i) => (
-                <span
-                  key={`${p.phone}-${i}`}
-                  className={`inline-flex items-center px-2 py-1 rounded border text-sm font-mono ${phonemeColor(p.quality_score)}`}
-                  title={`${p.phone} → ${p.sound_most_like} (${p.quality_score})`}
-                >
-                  {p.phone}
-                </span>
-              ))}
-            </div>
+        <div key={`${word}-${wordIdx}`}>
+          <div className="text-xs text-gray-400 font-bold mb-1.5 uppercase tracking-wider font-display">
+            {word}
           </div>
-        ))}
-
+          <div className="flex gap-1.5 flex-wrap">
+            {phones.map((p, i) => (
+              <span
+                key={`${p.phone}-${i}`}
+                className={`inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-1.5 rounded-xl border text-sm font-bold font-display shadow-sm transition-transform hover:scale-110 ${phonemeStyle(p.quality_score)}`}
+                title={`${p.phone} → ${p.sound_most_like} (${p.quality_score})`}
+              >
+                {p.phone}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

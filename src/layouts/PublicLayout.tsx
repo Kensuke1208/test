@@ -19,10 +19,17 @@ export function PublicLayout() {
   if (!ready) return null;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center">
-      <div className="w-full max-w-md px-4">
-        <h1 className="text-3xl font-bold text-center mb-8">Eigo</h1>
-        <Outlet />
+    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-black font-display text-mint-700 tracking-tight mb-1">
+            Eigo
+          </h1>
+          <p className="text-sm text-gray-400 font-bold">英語の発音を練習しよう</p>
+        </div>
+        <div className="bg-white rounded-[var(--radius-card)] border border-mint-100 shadow-lg shadow-mint-200/30 p-6">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

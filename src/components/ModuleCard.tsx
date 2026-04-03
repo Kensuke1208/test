@@ -21,12 +21,12 @@ export function ModuleCard({
   return (
     <Link
       to={`/modules/${id}`}
-      className="block rounded-xl border border-gray-200 p-4 hover:border-teal-300 hover:shadow-sm transition-all"
+      className="block rounded-[var(--radius-card)] bg-white border border-mint-100 p-5 hover:border-mint-300 hover:shadow-lg hover:shadow-mint-200/40 transition-all hover:-translate-y-0.5"
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-lg font-bold">{title}</h3>
         {progress.completed && (
-          <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-bold">
+          <span className="text-xs bg-mint-500 text-white px-2.5 py-1 rounded-full font-bold">
             完了
           </span>
         )}

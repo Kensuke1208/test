@@ -1,1 +1,91 @@
+@import url("https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Quicksand:wght@500;600;700&display=swap");
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Zen Maru Gothic", "Hiragino Maru Gothic Pro", sans-serif;
+  --font-display: "Quicksand", "Zen Maru Gothic", sans-serif;
+
+  --color-mint-50: #f0fdfb;
+  --color-mint-100: #d6f5ee;
+  --color-mint-200: #b0ecdf;
+  --color-mint-300: #7adecb;
+  --color-mint-400: #48c9b0;
+  --color-mint-500: #2ba891;
+  --color-mint-600: #1f8a78;
+  --color-mint-700: #1b6e61;
+  --color-mint-800: #19574e;
+  --color-mint-900: #164840;
+
+  --color-coral-400: #f28b82;
+  --color-coral-500: #e8705a;
+
+  --color-sun-400: #fdd663;
+  --color-sun-500: #f4b942;
+
+  --radius-card: 1.25rem;
+  --radius-button: 1rem;
+}
+
+/* Gentle gradient background for the entire app */
+body {
+  background: linear-gradient(160deg, var(--color-mint-50) 0%, #f7fffe 40%, #fafcfb 100%);
+  min-height: 100vh;
+}
+
+/* Record button pulse animation */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes confetti-pop {
+  0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+  60% { transform: scale(1.1) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out both;
+}
+
+.animate-confetti-pop {
+  animation: confetti-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Circular score ring */
+.score-ring {
+  transform: rotate(-90deg);
+}
+
+.score-ring-track {
+  fill: none;
+  stroke: var(--color-mint-100);
+  stroke-width: 8;
+}
+
+.score-ring-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}

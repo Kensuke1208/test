@@ -11,7 +11,7 @@ export function ModuleListPage() {
         {[...Array(3)].map((_, i) => (
           <div
             key={i}
-            className="h-24 rounded-xl bg-gray-100 animate-pulse"
+            className="h-28 rounded-[var(--radius-card)] bg-mint-50 animate-pulse"
           />
         ))}
       </div>
@@ -20,16 +20,18 @@ export function ModuleListPage() {
 
   if (error) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        データを読み込めませんでした。もう一度試してね
+      <div className="text-center py-16">
+        <div className="text-4xl mb-3">😢</div>
+        <p className="text-gray-500 font-bold">データを読み込めませんでした。もう一度試してね</p>
       </div>
     );
   }
 
   if (!modules || modules.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        モジュールを準備中です
+      <div className="text-center py-16">
+        <div className="text-4xl mb-3">📚</div>
+        <p className="text-gray-500 font-bold">モジュールを準備中です</p>
       </div>
     );
   }

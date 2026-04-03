@@ -1,28 +1,6 @@
 import type { Phoneme } from "../lib/api";
 import { getPronunciationTip } from "../lib/pronunciation-tips";
-
-// ARPABET → child-friendly display (subset, see app.md §8)
-const PHONEME_DISPLAY: Record<string, string> = {
-  r: '"r"',
-  l: '"l"',
-  th: '"th"',
-  dh: '"th"',
-  v: '"v"',
-  f: '"f"',
-  b: '"b"',
-  s: '"s"',
-  z: '"z"',
-  ae: '"a"',
-  ah: '"u"',
-  aa: '"o"',
-  ih: '"i"',
-  uh: '"oo"',
-  ax: '"a"',
-};
-
-function displayPhone(phone: string): string {
-  return PHONEME_DISPLAY[phone] ?? `"${phone}"`;
-}
+import { displayPhone } from "../lib/phoneme-display";
 
 interface MistakeHintsProps {
   phonemes: Phoneme[];
@@ -44,17 +22,25 @@ export function MistakeHints({ phonemes, max = 3 }: MistakeHintsProps) {
   if (mistakes.length === 0) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 animate-slide-up" style={{ animationDelay: "150ms" }}>
       {mistakes.map((m, i) => {
         const tip = getPronunciationTip(m.phone, m.sound_most_like);
         return (
-          <div key={i} className="text-sm">
-            <div className="text-gray-700">
-              {displayPhone(m.phone)} が {displayPhone(m.sound_most_like)}{" "}
-              に聞こえたよ
+          <div
+            key={i}
+            className="rounded-2xl bg-white/80 border border-mint-200 p-3.5 shadow-sm"
+          >
+            <div className="text-sm font-bold text-gray-700">
+              <span className="text-coral-500">{displayPhone(m.phone)}</span>
+              {" "}が{" "}
+              <span className="text-gray-500">{displayPhone(m.sound_most_like)}</span>
+              {" "}に聞こえたよ
             </div>
             {tip && (
-              <div className="text-teal-600 mt-0.5">💡 {tip}</div>
+              <div className="text-sm text-mint-700 mt-1.5 flex items-start gap-1.5">
+                <span className="text-base leading-none mt-0.5">💡</span>
+                <span>{tip}</span>
+              </div>
             )}
           </div>
         );
