@@ -21,6 +21,8 @@ export const errors = {
     errorResponse("bad_request", message, 400),
   unauthorized: (message = "Unauthorized") =>
     errorResponse("unauthorized", message, 401),
+  forbidden: (message: string) =>
+    errorResponse("forbidden", message, 403),
   notFound: (message: string) =>
     errorResponse("not_found", message, 404),
   internal: (message = "Internal server error") =>

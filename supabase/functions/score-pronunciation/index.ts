@@ -78,7 +78,7 @@ app.post("/", async (c) => {
     .single();
 
   if (learnerError) {
-    return errors.unauthorized("Learner not found or not owned by user");
+    return errors.forbidden("Learner not found or not owned by user");
   }
 
   // 4. Look up word text

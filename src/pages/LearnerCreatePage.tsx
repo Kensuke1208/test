@@ -20,16 +20,16 @@ export function LearnerCreatePage() {
     setLoading(true);
 
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    if (!user) {
+    if (!session) {
       navigate("/login");
       return;
     }
 
     const { error: insertError } = await supabase.from("learners").insert({
-      account_id: user.id,
+      account_id: session.user.id,
       display_name: displayName.trim(),
     });
 

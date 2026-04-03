@@ -53,14 +53,12 @@ export function AuthGuard({ requireLearner = false }: AuthGuardProps) {
 
   // Not authenticated
   if (!session) {
-    if (import.meta.env.DEV) return null;
     return <Navigate to="/login" state={{ from: location }} />;
   }
 
   // Learner required but not selected or invalid
   if (requireLearner) {
     if (!selectedLearnerId || learnerValid === false) {
-      if (import.meta.env.DEV) return null;
       return <Navigate to="/learners" state={{ from: location }} />;
     }
     if (learnerValid === undefined) return null;
