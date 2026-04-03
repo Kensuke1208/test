@@ -30,15 +30,15 @@
 
 認証なしで、練習の一連のフローが動くことを検証する。
 
-- [ ] TTS で仮音声を生成 — シードデータの単語 + 例文の音声を TTS で生成し、audio_url に設定
-- [ ] モジュール一覧ページ — Supabase からモジュール + 進捗（v_module_progress）を取得して表示
-- [ ] モジュール詳細ページ — 10 単語のスコア帯表示（v_word_mastery: score, steps_cleared/steps_total）
-- [ ] 練習ページ（本番版） — DevPracticePage の部品を再利用
-  - [ ] 全ステップ表示（アンロック、どのステップからでも挑戦可能）
-  - [ ] 聞いてから話す（初回はお手本再生必須）
-  - [ ] スコア帯別フィードバック（メッセージ、正解数、前回比較、発音のコツ）
-  - [ ] ネイティブ音声再生（audio_url、TTS 仮音声）
-- [ ] Edge Function 拡張 — word_id / sentence_id で DB からテキストを取得
+- [x] TTS で仮音声を生成 — ブラウザ SpeechSynthesis で audio_url が null のときフォールバック再生
+- [x] モジュール一覧ページ — Supabase からモジュール + 進捗（v_module_progress）を取得して表示
+- [x] モジュール詳細ページ — 10 単語のスコア帯表示（v_word_mastery: score, steps_cleared/steps_total）
+- [x] 練習ページ（本番版） — DevPracticePage の部品を再利用
+  - [x] 全ステップ表示（アンロック、どのステップからでも挑戦可能）
+  - [x] 聞いてから話す（初回はお手本再生必須）
+  - [x] スコア帯別フィードバック（メッセージ、正解数、前回比較、発音のコツ）
+  - [x] ネイティブ音声再生（audio_url、TTS 仮音声）
+- [x] Edge Function 拡張 — word_id / sentence_id で DB からテキストを取得
 
 この Phase では Auth Guard をバイパスし、学習者 ID は固定値を使う。Speechace は評価専用で音声データを提供しないため、TTS で仮音声を用意する。
 
