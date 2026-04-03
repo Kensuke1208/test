@@ -16,7 +16,7 @@ with expanded as (
   select
     a.learner_id,
     p.value->>'phone' as phone,
-    (p.value->>'quality_score')::integer as quality_score,
+    (p.value->>'quality_score')::numeric::integer as quality_score,
     p.value->>'sound_most_like' as sound_most_like,
     (p.value->>'is_correct')::boolean as is_correct
   from public.attempts a,

@@ -127,10 +127,12 @@ alter table "public"."words" validate constraint "words_module_id_fkey";
 
 alter table "public"."words" add constraint "words_unique_per_module" UNIQUE using index "words_unique_per_module";
 
+set check_function_bodies = off;
+
 create or replace view "public"."v_learner_phoneme_stats" as  WITH expanded AS (
          SELECT a.learner_id,
             (p.value ->> 'phone'::text) AS phone,
-            ((p.value ->> 'quality_score'::text))::integer AS quality_score,
+            (((p.value ->> 'quality_score'::text))::numeric)::integer AS quality_score,
             (p.value ->> 'sound_most_like'::text) AS sound_most_like,
             ((p.value ->> 'is_correct'::text))::boolean AS is_correct
            FROM public.attempts a,
@@ -211,6 +213,45 @@ create or replace view "public"."v_word_mastery" as  WITH attempted_words AS (
      JOIN public.words w ON ((w.id = ast.word_id)))
   GROUP BY ast.learner_id, ast.word_id, w.module_id;
 
+
+CREATE OR REPLACE FUNCTION internal.handle_new_user()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_display_name text;
+begin
+  v_display_name := nullif(trim(coalesce(
+    new.raw_user_meta_data->>'display_name',
+    new.raw_user_meta_data->>'name',
+    ''
+  )), '');
+
+  insert into public.accounts (id, display_name, created_at)
+  values (
+    new.id,
+    coalesce(v_display_name, 'User'),
+    new.created_at
+  );
+
+  return new;
+end;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION internal.handle_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+begin
+  new.updated_at := clock_timestamp();
+  return new;
+end;
+$function$
+;
 
 create or replace view "public"."v_module_progress" as  WITH active_learners AS (
          SELECT DISTINCT attempts.learner_id
