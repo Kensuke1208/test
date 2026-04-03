@@ -34,5 +34,5 @@ vite.config.ts.timestamp-*
 # Coverage
 coverage/
 
-# Claude Code
-.claude/
+# Claude Code (local settings only)
+.claude/settings.local.json
