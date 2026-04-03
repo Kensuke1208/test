@@ -21,7 +21,7 @@ Run:
 
 begin;
 
-select plan(10);
+select plan(11);
 
 -- ============================================
 -- Setup: users, learners, content, attempts
@@ -155,6 +155,13 @@ select throws_ok(
   '23514',
   null,
   'word practice must not have target_word_score'
+);
+
+-- Test 8: valid sentence practice with sentence_id and target_word_score
+select lives_ok(
+  $$insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, phonemes)
+    values ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000001', 'sentence', 80, 85, '[]'::jsonb)$$,
+  'valid sentence practice with sentence_id and target_word_score'
 );
 
 -- ============================================

@@ -1,5 +1,7 @@
-import { PASS_THRESHOLD } from "./api";
 import type { Phoneme } from "./api";
+
+// Must match the threshold hardcoded in supabase/schemas/22_practice_views.sql
+export const PASS_THRESHOLD = 80;
 
 export type ScoreTier = "excellent" | "good" | "close" | "retry";
 

@@ -15,9 +15,6 @@ export interface ScoringResponse {
   phonemes: Phoneme[];
 }
 
-// Pass threshold — must match the value hardcoded in v_word_mastery view
-export const PASS_THRESHOLD = 80;
-
 export async function scorePronunciation(
   audio: Blob,
   text: string,

@@ -64,6 +64,7 @@ comment on view public.v_learner_phoneme_stats is 'Per-learner phoneme accuracy 
 -- Score-based word mastery. Score is the minimum best score across all steps
 -- (word practice + each sentence). Unattempted steps contribute 0.
 -- Mastered when all steps have score >= 80 (threshold).
+-- NOTE: Threshold 80 is also defined in src/lib/score.ts (PASS_THRESHOLD).
 
 create or replace view public.v_word_mastery as
 with attempted_words as (
