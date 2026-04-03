@@ -11,7 +11,12 @@ interface AuthGuardProps {
 export function AuthGuard({ requireLearner = false }: AuthGuardProps) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const selectedLearnerId = useLearnerStore((s) => s.selectedLearnerId);
+  const clear = useLearnerStore((s) => s.clear);
   const location = useLocation();
+  // undefined = checking, true = valid, false = invalid
+  const [learnerValid, setLearnerValid] = useState<boolean | undefined>(
+    requireLearner && selectedLearnerId ? undefined : true,
+  );
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -23,14 +28,42 @@ export function AuthGuard({ requireLearner = false }: AuthGuardProps) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Validate that selectedLearnerId exists in DB
+  useEffect(() => {
+    if (!requireLearner || !selectedLearnerId || !session) return;
+
+    setLearnerValid(undefined);
+    supabase
+      .from("learners")
+      .select("id")
+      .eq("id", selectedLearnerId)
+      .single()
+      .then(({ error }) => {
+        if (error) {
+          clear();
+          setLearnerValid(false);
+        } else {
+          setLearnerValid(true);
+        }
+      });
+  }, [requireLearner, selectedLearnerId, session, clear]);
+
+  // Loading session
   if (session === undefined) return null;
+
+  // Not authenticated
   if (!session) {
     if (import.meta.env.DEV) return null;
     return <Navigate to="/login" state={{ from: location }} />;
   }
-  if (requireLearner && !selectedLearnerId) {
-    if (import.meta.env.DEV) return null;
-    return <Navigate to="/learners" state={{ from: location }} />;
+
+  // Learner required but not selected or invalid
+  if (requireLearner) {
+    if (!selectedLearnerId || learnerValid === false) {
+      if (import.meta.env.DEV) return null;
+      return <Navigate to="/learners" state={{ from: location }} />;
+    }
+    if (learnerValid === undefined) return null;
   }
 
   return <Outlet />;

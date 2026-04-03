@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePracticeData, useScoreMutation } from "../hooks/use-practice";
 import { useTts } from "../hooks/use-tts";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
+import { useLearnerStore } from "../stores/learner-store";
 import { isPassing, getScoreTier } from "../lib/score";
 import { ScoreDisplay } from "../components/ScoreDisplay";
 import { PhonemeGrid } from "../components/PhonemeGrid";
@@ -17,6 +19,7 @@ interface Step {
   text: string;
   sentenceId?: string;
   audioUrl: string | null;
+  stepKey: string;
 }
 
 export function PracticePage() {
@@ -25,6 +28,8 @@ export function PracticePage() {
     wordId: string;
   }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const learnerId = useLearnerStore((s) => s.selectedLearnerId);
   const { data, isLoading, error } = usePracticeData(wordId);
   const { speak } = useTts();
   const {
@@ -43,6 +48,7 @@ export function PracticePage() {
     number | undefined
   >(undefined);
   const [hasHeardModel, setHasHeardModel] = useState(false);
+  const [initialStepSet, setInitialStepSet] = useState(false);
 
   const handleAudioReady = useRef<((blob: Blob) => void) | null>(null);
 
@@ -53,12 +59,14 @@ export function PracticePage() {
         type: "word",
         text: data.word.text,
         audioUrl: data.word.audio_url,
+        stepKey: "word",
       },
       ...data.sentences.map((s) => ({
         type: "sentence" as const,
         text: s.text,
         sentenceId: s.id,
         audioUrl: s.audio_url,
+        stepKey: `sentence:${s.id}`,
       })),
     ];
   }, [data]);
@@ -73,6 +81,19 @@ export function PracticePage() {
     ];
   }, [data]);
 
+  // Set initial step based on past attempts (resume position)
+  useEffect(() => {
+    if (!data || initialStepSet || steps.length === 0) return;
+    setInitialStepSet(true);
+
+    const firstUnpassed = steps.findIndex(
+      (s) => !data.passedSteps.has(s.stepKey),
+    );
+
+    // All passed → start from beginning for re-practice
+    setCurrentStepIndex(firstUnpassed === -1 ? 0 : firstUnpassed);
+  }, [data, steps, initialStepSet]);
+
   // Reset state when step changes
   useEffect(() => {
     setHasHeardModel(false);
@@ -83,13 +104,14 @@ export function PracticePage() {
 
   // Handle audio blob ready
   handleAudioReady.current = (blob: Blob) => {
-    if (state !== "recording" || !currentStep || !wordId) return;
+    if (state !== "recording" || !currentStep || !wordId || !learnerId) return;
 
     setState("submitting");
 
     scoreMutation.mutate(
       {
         audio: blob,
+        learnerId,
         wordId,
         sentenceId: currentStep.sentenceId,
       },
@@ -103,6 +125,13 @@ export function PracticePage() {
           }
           setFeedback(result);
           setState("feedback");
+
+          // Invalidate to update progress/mastery displays
+          queryClient.invalidateQueries({
+            queryKey: ["practice-data", wordId],
+          });
+          queryClient.invalidateQueries({ queryKey: ["module-detail"] });
+          queryClient.invalidateQueries({ queryKey: ["modules"] });
         },
         onError: () => {
           setState("ready");
@@ -122,7 +151,7 @@ export function PracticePage() {
     }
   }, [isLoading, data, navigate, moduleId]);
 
-  if (isLoading) {
+  if (isLoading || !initialStepSet) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="h-32 w-64 bg-gray-100 rounded-xl animate-pulse" />

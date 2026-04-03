@@ -1,5 +1,4 @@
-const FUNCTIONS_URL =
-  import.meta.env.VITE_SUPABASE_URL + "/functions/v1";
+import { supabase } from "./supabase";
 
 export interface Phoneme {
   word: string;
@@ -10,6 +9,7 @@ export interface Phoneme {
 }
 
 export interface ScoringResponse {
+  attempt_id: string;
   score: number;
   target_word_score: number | null;
   phonemes: Phoneme[];
@@ -17,25 +17,25 @@ export interface ScoringResponse {
 
 export async function scorePronunciation(
   audio: Blob,
+  learnerId: string,
   wordId: string,
   sentenceId?: string,
 ): Promise<ScoringResponse> {
   const ext = audio.type.includes("mp4") ? "mp4" : "webm";
   const formData = new FormData();
   formData.append("audio", audio, `recording.${ext}`);
+  formData.append("learner_id", learnerId);
   formData.append("word_id", wordId);
   if (sentenceId) formData.append("sentence_id", sentenceId);
 
-  // TODO (Phase 2): Add Authorization header with user JWT
-  const res = await fetch(`${FUNCTIONS_URL}/score-pronunciation`, {
-    method: "POST",
-    body: formData,
-  });
+  const { data, error } = await supabase.functions.invoke(
+    "score-pronunciation",
+    { body: formData },
+  );
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message ?? `API error ${res.status}`);
+  if (error) {
+    throw new Error(error.message ?? "API error");
   }
 
-  return res.json();
+  return data as ScoringResponse;
 }

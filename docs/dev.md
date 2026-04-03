@@ -7,11 +7,10 @@
 | Phase | 内容 | 目的 |
 |-------|------|------|
 | 0 | 設計 + 基盤構築 | **完了** |
-| 1 | コアフロー | 練習の一連のフローが認証なしで動く |
-| 2 | 認証 + アカウント | ログイン・学習者管理が動く |
-| 3 | DB 連携 | attempts 保存、合格判定、進捗追跡 |
-| 4 | ダッシュボード | 生徒・親向けの情報表示 |
-| 5 | 仕上げ | デザイン、コンテンツ、デプロイ |
+| 1 | コアフロー | **完了** |
+| 2 | 認証 + DB 連携 | **完了** |
+| 3 | ダッシュボード | 生徒・親向けの情報表示 |
+| 4 | 仕上げ | デザイン、コンテンツ、デプロイ |
 
 ## Phase 0: 設計 + 基盤構築（完了）
 
@@ -42,23 +41,23 @@
 
 この Phase では Auth Guard をバイパスし、学習者 ID は固定値を使う。Speechace は評価専用で音声データを提供しないため、TTS で仮音声を用意する。
 
-## Phase 2: 認証 + アカウント
+## Phase 2: 認証 + DB 連携
 
-- [ ] ログインページ — Supabase Auth signInWithPassword
-- [ ] サインアップページ — Supabase Auth signUp
-- [ ] Auth Guard の有効化 — verify_jwt = true に変更
-- [ ] 学習者選択ページ — learners CRUD
-- [ ] 学習者作成ページ
-- [ ] 学習者編集ページ
-- [ ] Edge Function に JWT 認証 + 2 クライアント方式を追加
+認証フロー + attempts 保存を統合実装。Edge Function の JWT 認証と attempts INSERT を1回の改修で行う。
 
-## Phase 3: DB 連携
+- [x] ログインページ — Supabase Auth signInWithPassword
+- [x] サインアップページ — Supabase Auth signUp
+- [x] Auth Guard の有効化 — verify_jwt = true、learner 存在確認
+- [x] 学習者選択ページ — learners 一覧、選択 → Zustand → /modules
+- [x] 学習者作成ページ — learners INSERT + UNIQUE 制約ハンドリング
+- [x] 学習者編集ページ — learners UPDATE
+- [x] Edge Function — JWT 認証 + 2 クライアント方式（anon key + JWT / service_role）+ attempts INSERT
+- [x] supabase.functions.invoke() — SDK が JWT を自動付与
+- [x] ステップごとの best_score（attempts から算出、再開位置に使用）
+- [x] TopBar — 学習者名表示 + 日本語ラベル
+- [x] PublicLayout — 認証済みリダイレクト
 
-- [ ] Edge Function で attempts を DB に保存（score のみ、is_passed なし）
-- [ ] ステップごとの best_score 表示（attempts から算出）
-- [ ] 前回スコアとの比較表示
-
-## Phase 4: ダッシュボード
+## Phase 3: ダッシュボード
 
 - [ ] 学習者ダッシュボード
   - [ ] プログレスバー（steps_cleared / steps_total）
@@ -69,11 +68,11 @@
   - [ ] 苦手ポイント（音素→文字表記マッピング）
   - [ ] 学習者切り替え
 
-## Phase 5: 仕上げ
+## Phase 4: 仕上げ
 
 - [ ] UI デザイン — 小学生向けのビジュアル（色、サイズ、ひらがな）
 - [ ] コンテンツ投入 — 英検 3 級レベルの全モジュール（約 130 モジュール）
-- [ ] 音声データ — Phase 1 の TTS 仮音声を本番音声に差し替え（ネイティブ録音、プロ TTS、または音声データベース）
+- [ ] 音声データ — SpeechSynthesis 仮音声を本番音声に差し替え（ネイティブ録音、プロ TTS、または音声データベース）
 - [ ] 画像データ — 各単語のイラスト
 - [ ] Cloudflare Pages デプロイ
 - [ ] Supabase プロジェクト（本番）セットアップ
@@ -88,5 +87,5 @@
 
 - **コア → 周辺の順**で実装する。認証やダッシュボードはコアフローが動いてから
 - **各 Phase の終わりにレビュー**を行い、スペックとの整合性を確認する
-- **dev ルート（/dev/*）** はコアフロー検証用。Phase 2 で認証を入れた後に削除する
+- **dev ルート（/dev/*）** はコアフロー検証用。Phase 1 完了時に削除済み
 - **テストは各 Phase で追加**する。DB テストは完了済み。フロントのテストは Phase 1 から追加

@@ -5,6 +5,8 @@ import { AppLayout } from "./layouts/AppLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 import { LearnerSelectionPage } from "./pages/LearnerSelectionPage";
+import { LearnerCreatePage } from "./pages/LearnerCreatePage";
+import { LearnerEditPage } from "./pages/LearnerEditPage";
 import { ModuleListPage } from "./pages/ModuleListPage";
 import { ModuleDetailPage } from "./pages/ModuleDetailPage";
 import { PracticePage } from "./pages/PracticePage";
@@ -25,8 +27,8 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: "/learners", element: <LearnerSelectionPage /> },
-          { path: "/learners/new", element: <LearnerSelectionPage /> },
-          { path: "/learners/:learnerId/edit", element: <LearnerSelectionPage /> },
+          { path: "/learners/new", element: <LearnerCreatePage /> },
+          { path: "/learners/:learnerId/edit", element: <LearnerEditPage /> },
           { path: "/dashboard", element: <ParentDashboardPage /> },
         ],
       },

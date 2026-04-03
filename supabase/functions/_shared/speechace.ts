@@ -30,6 +30,7 @@ export async function scorePronunciation(
   audio: Blob,
   text: string,
   targetWord: string | null,
+  learnerId?: string,
 ): Promise<ScoringResult> {
   const apiKey = Deno.env.get("SPEECHACE_API_KEY");
   if (!apiKey) throw new Error("Missing SPEECHACE_API_KEY");
@@ -43,8 +44,8 @@ export async function scorePronunciation(
   const ext = audio.type?.includes("mp4") ? "mp4" : "webm";
   form.append("user_audio_file", audio, `recording.${ext}`);
 
-  // TODO: Add user_id=learner_id param when auth is implemented (per spec)
   const params = new URLSearchParams({ key: apiKey, dialect: "en-us" });
+  if (learnerId) params.set("user_id", learnerId);
   const url = `${apiUrl}?${params.toString()}`;
   const response = await fetch(url, {
     method: "POST",
