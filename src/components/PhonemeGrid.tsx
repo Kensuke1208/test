@@ -15,7 +15,7 @@ export function PhonemeGrid({ phonemes, score }: PhonemeGridProps) {
   // For very low scores, hide detailed phoneme grid
   if (score < 60) return null;
 
-  // Group phonemes by word, show correct ones first within each group
+  // Group phonemes by word, preserve natural order
   const grouped = new Map<string, Phoneme[]>();
   for (const p of phonemes) {
     const list = grouped.get(p.word) ?? [];
@@ -25,15 +25,11 @@ export function PhonemeGrid({ phonemes, score }: PhonemeGridProps) {
 
   return (
     <div className="space-y-3">
-      {[...grouped.entries()].map(([word, phones], wordIdx) => {
-        const sorted = [...phones].sort(
-          (a, b) => (b.is_correct ? 1 : 0) - (a.is_correct ? 1 : 0),
-        );
-        return (
+      {[...grouped.entries()].map(([word, phones], wordIdx) => (
           <div key={`${word}-${wordIdx}`}>
             <div className="text-sm text-gray-500 mb-1">{word}</div>
             <div className="flex gap-1 flex-wrap">
-              {sorted.map((p, i) => (
+              {phones.map((p, i) => (
                 <span
                   key={`${p.phone}-${i}`}
                   className={`inline-flex items-center px-2 py-1 rounded border text-sm font-mono ${phonemeColor(p.quality_score)}`}
@@ -44,8 +40,8 @@ export function PhonemeGrid({ phonemes, score }: PhonemeGridProps) {
               ))}
             </div>
           </div>
-        );
-      })}
+        ))}
+
     </div>
   );
 }

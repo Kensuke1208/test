@@ -17,16 +17,15 @@ export interface ScoringResponse {
 
 export async function scorePronunciation(
   audio: Blob,
-  text: string,
-  targetWord?: string,
+  wordId: string,
+  sentenceId?: string,
 ): Promise<ScoringResponse> {
   const ext = audio.type.includes("mp4") ? "mp4" : "webm";
   const formData = new FormData();
   formData.append("audio", audio, `recording.${ext}`);
-  formData.append("text", text);
-  if (targetWord) formData.append("target_word", targetWord);
+  formData.append("word_id", wordId);
+  if (sentenceId) formData.append("sentence_id", sentenceId);
 
-  // TODO: Add Authorization header when auth is implemented
   const res = await fetch(`${FUNCTIONS_URL}/score-pronunciation`, {
     method: "POST",
     body: formData,

@@ -246,6 +246,7 @@ Speechace API の Score Text エンドポイントを使用する。単語・例
 - フラッピング評価：Speechace API がリダクション・リンキングは自動対応するが、フラッピング（/t/ → [ɾ]）への対応は未文書化。実機検証が必要。
 - 合格閾値：仮に 80（Very Good 以上）としているが、小 5-6 の実音声で適切か検証が必要。
 - Safari 音声録音：MediaRecorder API の Safari 対応状況を検証し、必要に応じて polyfill やライブラリを導入する。
+- お手本音声：プロトタイプではブラウザの SpeechSynthesis API（音声合成）を使用。音質は OS・ブラウザ依存でネイティブ音声とは程遠い。本番ではプロ TTS サービス（Google Cloud TTS、OpenAI TTS 等）またはネイティブ録音に差し替える。
 
 ## 関連ドキュメント
 

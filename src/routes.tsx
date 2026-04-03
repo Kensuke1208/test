@@ -10,11 +10,7 @@ import { ModuleDetailPage } from "./pages/ModuleDetailPage";
 import { PracticePage } from "./pages/PracticePage";
 import { LearnerDashboardPage } from "./pages/LearnerDashboardPage";
 import { ParentDashboardPage } from "./pages/ParentDashboardPage";
-import { DevPracticePage } from "./pages/DevPracticePage";
-
 export const router = createBrowserRouter([
-  // TODO: Remove or guard with import.meta.env.DEV before production
-  { path: "/dev/practice", element: <DevPracticePage /> },
   {
     element: <PublicLayout />,
     children: [
@@ -53,6 +49,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: "/", element: <Navigate to="/login" /> },
-  { path: "*", element: <Navigate to="/login" /> },
+  { path: "/", element: <Navigate to="/modules" /> },
+  { path: "*", element: <Navigate to="/modules" /> },
 ]);

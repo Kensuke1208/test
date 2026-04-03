@@ -24,9 +24,14 @@ export function AuthGuard({ requireLearner = false }: AuthGuardProps) {
   }, []);
 
   if (session === undefined) return null;
-  if (!session) return <Navigate to="/login" state={{ from: location }} />;
-  if (requireLearner && !selectedLearnerId)
+  if (!session) {
+    if (import.meta.env.DEV) return null;
+    return <Navigate to="/login" state={{ from: location }} />;
+  }
+  if (requireLearner && !selectedLearnerId) {
+    if (import.meta.env.DEV) return null;
     return <Navigate to="/learners" state={{ from: location }} />;
+  }
 
   return <Outlet />;
 }

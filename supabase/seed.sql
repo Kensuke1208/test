@@ -1,7 +1,8 @@
 -- ============================================
--- Seed: Sample module with 10 words and example sentences
+-- Seed: Sample module with words and sentences
 -- ============================================
 -- Test data for development. Not production content.
+-- Test user + learner are created by dev-auth.ts bootstrap at app startup.
 
 insert into public.modules (id, title, description, display_order)
 values (
