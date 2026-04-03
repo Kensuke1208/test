@@ -163,7 +163,7 @@
 - 1 回の発音が 1 レコード
 - 単語練習と例文練習の両方を記録する（target_type で区別）
 - 例文練習の場合、テキスト全体のスコアと対象単語のスコアの両方を記録する
-- スコアが閾値以上なら合格（is_passed = true）
+- スコア（0-100）が事実源。合格判定はビューで動的に算出する（is_passed カラムは持たない）
 - アカウント所有者は自分の学習者の試行を参照できる
 
 ### カラム定義
@@ -178,7 +178,6 @@
 | target_type | text | NO | - | 'word' / 'sentence' |
 | score | integer | NO | - | speechace_score.pronunciation（0-100） |
 | target_word_score | integer | YES | - | 例文中の対象単語の quality_score（例文練習時のみ） |
-| is_passed | boolean | NO | false | 合格判定 |
 | phonemes | jsonb | NO | - | Speechace API の音素スコア全件（下記参照） |
 | created_at | timestamptz | NO | now() | 作成日時 |
 
@@ -231,8 +230,8 @@
 - account_id を非正規化する理由：RLS ポリシーで learners テーブルへの JOIN を避け、`account_id = auth.uid()` の単純な比較でインデックスが効くようにする。Supabase 公式推奨パターン
 - learner_id で紐付ける理由：練習履歴は学習者プロフィール単位で分離するため
 - word_id を必須にする理由：例文練習でも「どの単語の練習か」を常に追跡するため（合格判定、苦手音素の集計に必要）
-- is_passed をアプリ側で計算して保存する理由：閾値が変わった場合でも過去の合格判定は保持される。集計クエリも単純になる
-- 音素データを JSONB で保持する理由：1回の発音で10-50件の音素を正規化テーブルに書くのはオーバーヘッドが大きい。即時フィードバックは JSONB から直接読み、集計は learner_phoneme_stats で行う。BQ には JSONB をそのまま export して詳細分析が可能
+- is_passed を持たない理由：score が事実源。合格判定はビュー（v_word_mastery）で `score >= 閾値` から動的に算出する。閾値変更時に過去の判定も自動更新される
+- 音素データを JSONB で保持する理由：1回の発音で10-50件の音素を正規化テーブルに書くのはオーバーヘッドが大きい。即時フィードバックは JSONB から直接読み、集計は v_learner_phoneme_stats ビューで行う。BQ には JSONB をそのまま export して詳細分析が可能
 
 ## 7. v_learner_phoneme_stats
 
@@ -265,7 +264,7 @@
 
 ## 8. v_word_mastery
 
-学習者ごとの単語合格状態を返すビュー。単語練習の合格と全例文の合格を集計し、単語全体の合格判定を提供する。
+学習者ごとの単語マスター状態を返すビュー。全ステップ（単語練習 + 各例文）の best_score の最小値で単語の総合スコアを算出する。
 
 ### カラム定義
 
@@ -274,18 +273,18 @@
 | learner_id | uuid | 学習者 ID |
 | word_id | uuid | 単語 ID |
 | module_id | uuid | モジュール ID |
-| word_passed | boolean | 単語練習が 1 回以上合格しているか |
-| all_sentences_passed | boolean | その単語に紐づく全例文に各 1 回以上の合格 attempt があるか |
-| is_mastered | boolean | 単語の合格（word_passed AND all_sentences_passed） |
+| score | integer | 単語の総合スコア（全ステップの best_score の最小値、未挑戦は 0） |
+| steps_total | integer | 全ステップ数（1 + sentence 数） |
+| steps_cleared | integer | best_score >= 80 のステップ数 |
+| mastered | boolean | steps_cleared = steps_total |
 
-### all_sentences_passed の判定
+### score の算出
 
-その単語に紐づく sentences テーブルの全レコードに対して、合格した attempt が存在するかを確認する。未挑戦の例文がある場合は FALSE。
+各ステップの best_score（MAX(score)）を算出し、その最小値を単語の score とする。未挑戦のステップは best_score = 0 として扱う。
 
-例：単語 "apple" に例文が 3 つ紐づく場合
-- 3 つとも各 1 回以上合格 → TRUE
-- 2 つ合格、1 つ未挑戦 → FALSE
-- 2 つ合格、1 つ不合格のみ → FALSE
+- 進行はアンロック: 単語練習なしで例文だけ挑戦するケースもある
+- ビューは attempts の全 target_type から DISTINCT(learner_id, word_id) で対象を取得
+- sentences テーブルと LEFT JOIN して未挑戦の例文を 0 として反映
 
 ### RLS方針
 
@@ -295,13 +294,13 @@
 
 ### 設計判断
 
-- attempts の is_passed は個々の試行の合否。「単語の合格」は単語練習 + 全例文の合格が必要で、ビューで集計する
-- module_id を含める理由：モジュール合格（全 10 単語の is_mastered = true）の判定に使用する
-- 生徒ダッシュボードのプログレスバー、親向けのモジュール進捗表示の両方がこのビューを参照する
+- score は全ステップの最弱値: 1ステップでも低ければ単語全体のスコアが下がる。弱点を見逃さない設計
+- mastered は steps_cleared = steps_total から算出: ビューのカラムとして含めることで v_module_progress が直接参照できる
+- 閾値 80 はビュー内にハードコード（プロトタイプ）。変更時はビューの再作成が必要
 
 ## 9. v_module_progress
 
-学習者ごとのモジュール進捗を返すビュー。v_word_mastery を集計し、モジュール内の合格単語数と合格状態を提供する。
+学習者ごとのモジュール進捗を返すビュー。v_word_mastery の mastered を集計する。
 
 ### カラム定義
 
@@ -310,8 +309,8 @@
 | learner_id | uuid | 学習者 ID |
 | module_id | uuid | モジュール ID |
 | total_words | integer | モジュール内の総単語数 |
-| mastered_words | integer | 合格済み単語数 |
-| is_completed | boolean | モジュール合格（mastered_words = total_words） |
+| mastered_words | integer | マスター済み単語数 |
+| completed | boolean | mastered_words = total_words |
 
 ### RLS方針
 
@@ -321,5 +320,4 @@
 
 ### 設計判断
 
-- v_word_mastery を集計するビュー：単語合格の定義を v_word_mastery に集約し、モジュール進捗はその上に乗せる
-- completed_at をビューから除外した理由：「合格が成立した attempt」の特定がビューでは複雑すぎる。親ダッシュボードの月別進捗は、アプリ側で attempts の created_at から算出するか、将来的にモジュール合格時に別テーブルに記録する
+- v_word_mastery を集計するビュー：単語マスターの定義を v_word_mastery に集約し、モジュール進捗はその上に乗せる

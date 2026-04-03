@@ -63,12 +63,9 @@ Content-Type: multipart/form-data
    - 例文練習時: `word_score_list` から対象単語の `quality_score` → target_word_score
    - `word_score_list[].phone_score_list` を全単語分展開・結合し、各音素に `word` フィールドと `is_correct` フィールドを付与して phonemes JSONB を構築（例文練習時も全単語の音素を含む）
    - `is_correct` の算出: `phone === sound_most_like`（質問された音素と実際に発した音素が一致するか）。quality_score ベースではない
-8. 合格判定:
-   - 単語練習: `score >= 閾値`
-   - 例文練習: `score >= 閾値 AND target_word_score >= 閾値`
-9. **service_role クライアント**で DB に保存:
-   - attempts に 1 レコード INSERT（phonemes JSONB を含む）
-10. フロントにレスポンスを返す
+8. **service_role クライアント**で DB に保存:
+   - attempts に 1 レコード INSERT（phonemes JSONB を含む。is_passed は保存しない）
+9. フロントにレスポンスを返す
 
 ### 例文中の対象単語の特定
 
@@ -85,7 +82,6 @@ Speechace API の `word_score_list` から対象単語を特定する方法:
   "attempt_id": "uuid",
   "score": 85,
   "target_word_score": 75,
-  "is_passed": true,
   "phonemes": [
     {
       "word": "river",
@@ -131,7 +127,7 @@ Speechace API の `word_score_list` から対象単語を特定する方法:
 - `include_fluency`, `include_intonation` を送らない理由: プロトタイプでは音素の正確さのみで評価する（product.md の評価設計に基づく）
 - 2 クライアント方式の理由: 読み取りはユーザー JWT クライアントで RLS による権限チェックを活用し、書き込みは service_role クライアントで RLS をバイパスする。attempts に authenticated 向け INSERT ポリシーを作ると、ユーザーが任意のスコアを書き込めるリスクがある
 - attempts のみ INSERT する理由: 音素の集計は v_learner_phoneme_stats ビューで行うため、Edge Function での同期更新が不要
-- Edge Function で合格判定を行う理由: フロント側で判定すると閾値の改ざんが可能。サーバー側で判定し is_passed を記録する
+- 合格判定を Edge Function で行わない理由: score を保存し、合格判定はビュー（v_word_mastery）で動的に算出する。閾値変更時に過去の判定も自動更新される
 - 音素データを JSONB で保持する理由: 1回の発音で10-50件の音素を正規化テーブルに書くのはオーバーヘッドが大きい。即時フィードバックは JSONB から直接読み、集計は v_learner_phoneme_stats ビューで行う
 - 例文練習時も全単語の音素を JSONB に含める理由: 対象単語以外でも苦手音素は検出される（例: "morning" の /r/）。集計精度を高めるため
 - `user_id` に learner_id を送る理由: Speechace 側で学習者単位の進捗を追跡可能にするため。auth user ID ではなく learner_id を使うことで、アカウント内の学習者を区別できる
