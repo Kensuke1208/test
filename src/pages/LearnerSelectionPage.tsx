@@ -1,23 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "../lib/supabase";
+import { useLearners } from "../hooks/use-learners";
 import { useLearnerStore } from "../stores/learner-store";
 
 export function LearnerSelectionPage() {
   const navigate = useNavigate();
   const setSelectedLearnerId = useLearnerStore((s) => s.setSelectedLearnerId);
-
-  const { data: learners, isLoading } = useQuery({
-    queryKey: ["learners"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("learners")
-        .select("id, display_name")
-        .order("created_at");
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: learners, isLoading } = useLearners();
 
   const handleSelect = (id: string) => {
     setSelectedLearnerId(id);
