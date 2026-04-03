@@ -22,6 +22,9 @@ export function useModules() {
 
       if (modulesRes.error) throw modulesRes.error;
       if (wordsRes.error) throw wordsRes.error;
+      if ("error" in progressRes && progressRes.error) {
+        console.error("Failed to fetch module progress:", progressRes.error);
+      }
 
       // Count words per module
       const wordCounts = new Map<string, number>();
@@ -73,6 +76,9 @@ export function useModuleDetail(moduleId: string | undefined) {
 
       if (moduleRes.error) throw moduleRes.error;
       if (wordsRes.error) throw wordsRes.error;
+      if ("error" in masteryRes && masteryRes.error) {
+        console.error("Failed to fetch word mastery:", masteryRes.error);
+      }
 
       const masteryMap = new Map(
         (masteryRes.data ?? []).map((m) => [m.word_id, toWordMastery(m)]),

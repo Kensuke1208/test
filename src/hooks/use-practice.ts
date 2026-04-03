@@ -29,6 +29,9 @@ export function usePracticeData(wordId: string | undefined) {
 
       if (wordRes.error) throw wordRes.error;
       if (sentencesRes.error) throw sentencesRes.error;
+      if ("error" in attemptsRes && attemptsRes.error) {
+        console.error("Failed to fetch past attempts:", attemptsRes.error);
+      }
 
       // Find best score per step and determine which are passed
       const bestScores = new Map<string, number>();

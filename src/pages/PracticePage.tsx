@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePracticeData, useScoreMutation } from "../hooks/use-practice";
 import { useTts } from "../hooks/use-tts";
-import { useAudioRecorder } from "../hooks/useAudioRecorder";
+import { useAudioRecorder } from "../hooks/use-audio-recorder";
 import { useLearnerStore } from "../stores/learner-store";
 import { isPassing, getScoreTier } from "../lib/score";
 import { ScoreDisplay } from "../components/ScoreDisplay";
