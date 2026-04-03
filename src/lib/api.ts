@@ -26,6 +26,7 @@ export async function scorePronunciation(
   formData.append("word_id", wordId);
   if (sentenceId) formData.append("sentence_id", sentenceId);
 
+  // TODO (Phase 2): Add Authorization header with user JWT
   const res = await fetch(`${FUNCTIONS_URL}/score-pronunciation`, {
     method: "POST",
     body: formData,
