@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 import { scorePronunciation, type ScoringResponse } from "../lib/api";
+import { getScoreTier, getCorrectCount } from "../lib/score";
 import { ScoreDisplay } from "../components/ScoreDisplay";
 import { PhonemeGrid } from "../components/PhonemeGrid";
 import { MistakeHints } from "../components/MistakeHints";
@@ -14,10 +15,18 @@ const TEST_WORD = {
 type PracticeState = "ready" | "recording" | "submitting" | "feedback";
 
 export function DevPracticePage() {
-  const { isRecording, audioBlob, error: micError, startRecording, stopRecording } =
-    useAudioRecorder();
+  const {
+    isRecording,
+    audioBlob,
+    error: micError,
+    startRecording,
+    stopRecording,
+  } = useAudioRecorder();
   const [state, setState] = useState<PracticeState>("ready");
   const [feedback, setFeedback] = useState<ScoringResponse | null>(null);
+  const [previousCorrectCount, setPreviousCorrectCount] = useState<
+    number | undefined
+  >(undefined);
   const [apiError, setApiError] = useState<string | null>(null);
 
   // When recording stops and we have audio, submit it
@@ -31,6 +40,12 @@ export function DevPracticePage() {
 
     scorePronunciation(blob, TEST_WORD.text)
       .then((result) => {
+        // Save previous correct count for comparison
+        if (feedback) {
+          setPreviousCorrectCount(
+            getCorrectCount(feedback.phonemes).correct,
+          );
+        }
         setFeedback(result);
         setState("feedback");
       })
@@ -55,9 +70,10 @@ export function DevPracticePage() {
   };
 
   const handleRetry = () => {
-    setFeedback(null);
     setState("ready");
   };
+
+  const tier = feedback ? getScoreTier(feedback.score) : null;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 gap-8">
@@ -66,7 +82,9 @@ export function DevPracticePage() {
           dev mode — Speechace API test
         </div>
         <div className="text-5xl font-bold">{TEST_WORD.text}</div>
-        <div className="text-xl text-gray-600 mt-2">{TEST_WORD.meaning_ja}</div>
+        <div className="text-xl text-gray-600 mt-2">
+          {TEST_WORD.meaning_ja}
+        </div>
       </div>
 
       {/* Record button */}
@@ -85,12 +103,8 @@ export function DevPracticePage() {
       </button>
 
       {/* Errors */}
-      {micError && (
-        <div className="text-red-500 text-sm">{micError}</div>
-      )}
-      {apiError && (
-        <div className="text-red-500 text-sm">{apiError}</div>
-      )}
+      {micError && <div className="text-red-500 text-sm">{micError}</div>}
+      {apiError && <div className="text-red-500 text-sm">{apiError}</div>}
 
       {/* Loading */}
       {state === "submitting" && (
@@ -100,12 +114,20 @@ export function DevPracticePage() {
       {/* Feedback */}
       {state === "feedback" && feedback && (
         <div className="w-full max-w-md space-y-6">
-          <ScoreDisplay score={feedback.score} />
-          <PhonemeGrid phonemes={feedback.phonemes} />
+          <ScoreDisplay
+            score={feedback.score}
+            phonemes={feedback.phonemes}
+            previousCorrectCount={previousCorrectCount}
+          />
+          <PhonemeGrid phonemes={feedback.phonemes} score={feedback.score} />
           <MistakeHints phonemes={feedback.phonemes} />
           <button
             onClick={handleRetry}
-            className="w-full py-3 bg-teal-500 text-white rounded-lg font-bold hover:bg-teal-600"
+            className={`w-full py-3 text-white rounded-lg font-bold ${
+              tier === "excellent" || tier === "good"
+                ? "bg-green-500 hover:bg-green-600"
+                : "bg-teal-500 hover:bg-teal-600"
+            }`}
           >
             もういちど
           </button>

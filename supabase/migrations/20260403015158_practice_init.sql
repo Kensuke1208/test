@@ -8,7 +8,6 @@
     "target_type" text not null,
     "score" integer not null,
     "target_word_score" integer,
-    "is_passed" boolean not null default false,
     "phonemes" jsonb not null,
     "created_at" timestamp with time zone not null default now()
       );
@@ -164,39 +163,53 @@ create or replace view "public"."v_learner_phoneme_stats" as  WITH expanded AS (
      LEFT JOIN mistakes m ON (((s.learner_id = m.learner_id) AND (s.phone = m.phone))));
 
 
-create or replace view "public"."v_word_mastery" as  WITH word_attempts AS (
+create or replace view "public"."v_word_mastery" as  WITH attempted_words AS (
+         SELECT DISTINCT attempts.learner_id,
+            attempts.word_id
+           FROM public.attempts
+        ), word_step_best AS (
          SELECT attempts.learner_id,
             attempts.word_id,
-            bool_or(attempts.is_passed) AS word_passed
+            max(attempts.score) AS step_best
            FROM public.attempts
           WHERE (attempts.target_type = 'word'::text)
           GROUP BY attempts.learner_id, attempts.word_id
-        ), sentence_pass AS (
+        ), sentence_step_best AS (
          SELECT attempts.learner_id,
             attempts.word_id,
             attempts.sentence_id,
-            bool_or(attempts.is_passed) AS passed
+            max(attempts.score) AS step_best
            FROM public.attempts
           WHERE (attempts.target_type = 'sentence'::text)
           GROUP BY attempts.learner_id, attempts.word_id, attempts.sentence_id
-        ), sentence_check AS (
-         SELECT wa_1.learner_id,
-            s.word_id,
-            bool_and(COALESCE(sp.passed, false)) AS all_sentences_passed
-           FROM ((word_attempts wa_1
-             JOIN public.sentences s ON ((s.word_id = wa_1.word_id)))
-             LEFT JOIN sentence_pass sp ON (((sp.learner_id = wa_1.learner_id) AND (sp.sentence_id = s.id))))
-          GROUP BY wa_1.learner_id, s.word_id
+        ), all_steps AS (
+         SELECT aw.learner_id,
+            aw.word_id,
+            'word'::text AS step_type,
+            NULL::uuid AS sentence_id,
+            COALESCE(wb.step_best, 0) AS step_best
+           FROM (attempted_words aw
+             LEFT JOIN word_step_best wb ON (((wb.learner_id = aw.learner_id) AND (wb.word_id = aw.word_id))))
+        UNION ALL
+         SELECT aw.learner_id,
+            aw.word_id,
+            'sentence'::text AS step_type,
+            s.id AS sentence_id,
+            COALESCE(sb.step_best, 0) AS step_best
+           FROM ((attempted_words aw
+             JOIN public.sentences s ON ((s.word_id = aw.word_id)))
+             LEFT JOIN sentence_step_best sb ON (((sb.learner_id = aw.learner_id) AND (sb.sentence_id = s.id))))
         )
- SELECT wa.learner_id,
-    wa.word_id,
+ SELECT ast.learner_id,
+    ast.word_id,
     w.module_id,
-    COALESCE(wa.word_passed, false) AS word_passed,
-    COALESCE(sc.all_sentences_passed, true) AS all_sentences_passed,
-    (COALESCE(wa.word_passed, false) AND COALESCE(sc.all_sentences_passed, true)) AS is_mastered
-   FROM ((word_attempts wa
-     JOIN public.words w ON ((w.id = wa.word_id)))
-     LEFT JOIN sentence_check sc ON (((sc.learner_id = wa.learner_id) AND (sc.word_id = wa.word_id))));
+    min(ast.step_best) AS score,
+    (count(*))::integer AS steps_total,
+    (count(*) FILTER (WHERE (ast.step_best >= 80)))::integer AS steps_cleared,
+    (count(*) FILTER (WHERE (ast.step_best >= 80)) = count(*)) AS mastered
+   FROM (all_steps ast
+     JOIN public.words w ON ((w.id = ast.word_id)))
+  GROUP BY ast.learner_id, ast.word_id, w.module_id;
 
 
 create or replace view "public"."v_module_progress" as  WITH active_learners AS (
@@ -212,7 +225,7 @@ create or replace view "public"."v_module_progress" as  WITH active_learners AS 
          SELECT al.learner_id,
             mw.module_id,
             mw.total_words,
-            COALESCE(count(*) FILTER (WHERE vm.is_mastered), (0)::bigint) AS mastered_words
+            COALESCE(count(*) FILTER (WHERE vm.mastered), (0)::bigint) AS mastered_words
            FROM ((active_learners al
              CROSS JOIN module_words mw)
              LEFT JOIN public.v_word_mastery vm ON (((vm.learner_id = al.learner_id) AND (vm.module_id = mw.module_id))))
@@ -222,7 +235,7 @@ create or replace view "public"."v_module_progress" as  WITH active_learners AS 
     module_id,
     (total_words)::integer AS total_words,
     (mastered_words)::integer AS mastered_words,
-    (mastered_words = total_words) AS is_completed
+    (mastered_words = total_words) AS completed
    FROM mastered_count mc;
 
 

@@ -9,6 +9,7 @@
 -- 1. attempts table
 -- ============================================
 -- Each row is one pronunciation attempt. Immutable after creation.
+-- Score (0-100) is the source of truth. Pass/mastery is derived dynamically.
 -- Phoneme-level scores are stored as JSONB for immediate feedback.
 
 create table public.attempts (
@@ -20,7 +21,6 @@ create table public.attempts (
   target_type text not null,
   score integer not null,
   target_word_score integer,
-  is_passed boolean not null default false,
   phonemes jsonb not null,
   created_at timestamptz not null default now(),
   constraint attempts_target_type_check
@@ -31,7 +31,7 @@ create table public.attempts (
     check (target_type = 'sentence' or target_word_score is null)
 );
 
-comment on table public.attempts is 'Pronunciation practice attempts (immutable)';
+comment on table public.attempts is 'Pronunciation practice attempts (immutable). Score is source of truth; pass/mastery derived in views.';
 comment on column public.attempts.account_id is 'Denormalized from learners.account_id for RLS performance';
 comment on column public.attempts.learner_id is 'Learner who made the attempt';
 comment on column public.attempts.word_id is 'Target word (always set, even for sentence practice)';
@@ -39,7 +39,6 @@ comment on column public.attempts.sentence_id is 'Target sentence (null for word
 comment on column public.attempts.target_type is 'Practice type: word or sentence';
 comment on column public.attempts.score is 'Overall speechace_score.pronunciation (0-100)';
 comment on column public.attempts.target_word_score is 'Target word quality_score within sentence (null for word practice)';
-comment on column public.attempts.is_passed is 'Whether this attempt met the pass threshold';
 comment on column public.attempts.phonemes is 'Full phoneme scores from Speechace API as JSONB array';
 
 -- ============================================

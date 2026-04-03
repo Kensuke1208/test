@@ -1,4 +1,5 @@
 import type { Phoneme } from "../lib/api";
+import { getPronunciationTip } from "../lib/pronunciation-tips";
 
 // ARPABET → child-friendly display (subset, see app.md §8)
 const PHONEME_DISPLAY: Record<string, string> = {
@@ -43,13 +44,21 @@ export function MistakeHints({ phonemes, max = 3 }: MistakeHintsProps) {
   if (mistakes.length === 0) return null;
 
   return (
-    <div className="space-y-1">
-      {mistakes.map((m, i) => (
-        <div key={i} className="text-sm text-gray-700">
-          {displayPhone(m.phone)} が {displayPhone(m.sound_most_like)}{" "}
-          にきこえたよ
-        </div>
-      ))}
+    <div className="space-y-2">
+      {mistakes.map((m, i) => {
+        const tip = getPronunciationTip(m.phone, m.sound_most_like);
+        return (
+          <div key={i} className="text-sm">
+            <div className="text-gray-700">
+              {displayPhone(m.phone)} が {displayPhone(m.sound_most_like)}{" "}
+              にきこえたよ
+            </div>
+            {tip && (
+              <div className="text-teal-600 mt-0.5">💡 {tip}</div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

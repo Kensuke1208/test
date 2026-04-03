@@ -61,63 +61,73 @@ comment on view public.v_learner_phoneme_stats is 'Per-learner phoneme accuracy 
 -- ============================================
 -- 2. v_word_mastery
 -- ============================================
--- Determines whether a learner has mastered a word.
--- Mastered = word practice passed AND all sentences for that word passed.
--- Unattempted sentences count as not passed.
+-- Score-based word mastery. Score is the minimum best score across all steps
+-- (word practice + each sentence). Unattempted steps contribute 0.
+-- Mastered when all steps have score >= 80 (threshold).
 
 create or replace view public.v_word_mastery as
-with word_attempts as (
-  select
-    learner_id,
-    word_id,
-    bool_or(is_passed) as word_passed
+with attempted_words as (
+  select distinct learner_id, word_id
+  from public.attempts
+),
+word_step_best as (
+  select learner_id, word_id, max(score) as step_best
   from public.attempts
   where target_type = 'word'
   group by learner_id, word_id
 ),
-sentence_pass as (
-  select
-    learner_id,
-    word_id,
-    sentence_id,
-    bool_or(is_passed) as passed
+sentence_step_best as (
+  select learner_id, word_id, sentence_id, max(score) as step_best
   from public.attempts
   where target_type = 'sentence'
   group by learner_id, word_id, sentence_id
 ),
-sentence_check as (
+all_steps as (
+  -- Word step
   select
-    wa.learner_id,
-    s.word_id,
-    bool_and(coalesce(sp.passed, false)) as all_sentences_passed
-  from word_attempts wa
-  join public.sentences s on s.word_id = wa.word_id
-  left join sentence_pass sp
-    on sp.learner_id = wa.learner_id
-    and sp.sentence_id = s.id
-  group by wa.learner_id, s.word_id
+    aw.learner_id,
+    aw.word_id,
+    'word'::text as step_type,
+    null::uuid as sentence_id,
+    coalesce(wb.step_best, 0) as step_best
+  from attempted_words aw
+  left join word_step_best wb
+    on wb.learner_id = aw.learner_id and wb.word_id = aw.word_id
+
+  union all
+
+  -- Sentence steps (all sentences for the word, including unattempted)
+  select
+    aw.learner_id,
+    aw.word_id,
+    'sentence'::text as step_type,
+    s.id as sentence_id,
+    coalesce(sb.step_best, 0) as step_best
+  from attempted_words aw
+  join public.sentences s on s.word_id = aw.word_id
+  left join sentence_step_best sb
+    on sb.learner_id = aw.learner_id and sb.sentence_id = s.id
 )
 select
-  wa.learner_id,
-  wa.word_id,
+  ast.learner_id,
+  ast.word_id,
   w.module_id,
-  coalesce(wa.word_passed, false) as word_passed,
-  coalesce(sc.all_sentences_passed, true) as all_sentences_passed,
-  coalesce(wa.word_passed, false) and coalesce(sc.all_sentences_passed, true) as is_mastered
-from word_attempts wa
-join public.words w on w.id = wa.word_id
-left join sentence_check sc
-  on sc.learner_id = wa.learner_id and sc.word_id = wa.word_id;
+  min(ast.step_best)::integer as score,
+  count(*)::integer as steps_total,
+  count(*) filter (where ast.step_best >= 80)::integer as steps_cleared,
+  count(*) filter (where ast.step_best >= 80) = count(*) as mastered
+from all_steps ast
+join public.words w on w.id = ast.word_id
+group by ast.learner_id, ast.word_id, w.module_id;
 
 -- alter view public.v_word_mastery set (security_invoker = true);
 -- Note: security_invoker is not captured by db diff. Applied via manual migration.
-comment on view public.v_word_mastery is 'Per-learner word mastery status (word practice + all sentences passed)';
+comment on view public.v_word_mastery is 'Per-learner word mastery: score = min of all step bests, mastered when all steps cleared';
 
 -- ============================================
 -- 3. v_module_progress
 -- ============================================
 -- Aggregates v_word_mastery per module.
--- completed_at is the timestamp of the last word mastered in the module.
 
 create or replace view public.v_module_progress as
 with active_learners as (
@@ -137,7 +147,7 @@ mastered_count as (
     al.learner_id,
     mw.module_id,
     mw.total_words,
-    coalesce(count(*) filter (where vm.is_mastered), 0) as mastered_words
+    coalesce(count(*) filter (where vm.mastered), 0) as mastered_words
   from active_learners al
   cross join module_words mw
   left join public.v_word_mastery vm
@@ -149,9 +159,9 @@ select
   mc.module_id,
   mc.total_words::integer,
   mc.mastered_words::integer,
-  mc.mastered_words = mc.total_words as is_completed
+  mc.mastered_words = mc.total_words as completed
 from mastered_count mc;
 
 -- alter view public.v_module_progress set (security_invoker = true);
 -- Note: security_invoker is not captured by db diff. Applied via manual migration.
-comment on view public.v_module_progress is 'Per-learner module progress with completion timestamp';
+comment on view public.v_module_progress is 'Per-learner module progress: mastered words count and completion status';

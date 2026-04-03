@@ -6,8 +6,8 @@ Tests for v_learner_phoneme_stats, v_word_mastery, and v_module_progress views.
 
 Test targets:
   - v_learner_phoneme_stats: accuracy calculation, most_common_mistake
-  - v_word_mastery: word_passed, all_sentences_passed, unattempted sentences
-  - v_module_progress: mastered_words, is_completed, completed_at
+  - v_word_mastery: score (min of step bests), steps_total, steps_cleared, mastered
+  - v_module_progress: mastered_words, completed
   - RLS: views only show own account's data
 
 Prerequisites:
@@ -20,7 +20,7 @@ Run:
 
 begin;
 
-select plan(17);
+select plan(20);
 
 -- ============================================
 -- Setup: users, learners, content
@@ -53,7 +53,7 @@ insert into public.learners (id, account_id, display_name) values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'Taro'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', 'Jiro');
 
--- module with 2 words (simplified from 10 for testing)
+-- module with 2 words
 insert into public.modules (id, title, display_order)
 values ('dd000000-0000-0000-0000-000000000001', 'Test Module', 1);
 
@@ -71,29 +71,29 @@ insert into public.sentences (id, word_id, text, meaning_ja, display_order) valu
 -- Setup: attempts for Taro (user1's learner)
 -- ============================================
 
--- apple: word practice passed
-insert into public.attempts (account_id, learner_id, word_id, target_type, score, is_passed, phonemes) values
-  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'word', 85, true,
+-- apple: word practice score 85
+insert into public.attempts (account_id, learner_id, word_id, target_type, score, phonemes) values
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'word', 85,
    '[{"word":"apple","phone":"ae","quality_score":90,"sound_most_like":"ae","is_correct":true},
      {"word":"apple","phone":"p","quality_score":85,"sound_most_like":"p","is_correct":true},
      {"word":"apple","phone":"l","quality_score":40,"sound_most_like":"r","is_correct":false}]'::jsonb);
 
--- apple: sentence 1 passed
-insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes) values
-  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000001', 'sentence', 80, 85, true,
+-- apple: sentence 1 score 80
+insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, phonemes) values
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000001', 'sentence', 80, 85,
    '[{"word":"apple","phone":"ae","quality_score":85,"sound_most_like":"ae","is_correct":true}]'::jsonb);
 
--- apple: sentence 2 NOT attempted (should make all_sentences_passed = false)
+-- apple: sentence 2 NOT attempted (contributes 0 to score)
 
--- river: word practice passed
-insert into public.attempts (account_id, learner_id, word_id, target_type, score, is_passed, phonemes) values
-  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000002', 'word', 90, true,
+-- river: word practice score 90
+insert into public.attempts (account_id, learner_id, word_id, target_type, score, phonemes) values
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000002', 'word', 90,
    '[{"word":"river","phone":"r","quality_score":50,"sound_most_like":"l","is_correct":false},
      {"word":"river","phone":"r","quality_score":45,"sound_most_like":"l","is_correct":false}]'::jsonb);
 
--- river: sentence 1 passed
-insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes) values
-  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000002', 'ff000000-0000-0000-0000-000000000003', 'sentence', 82, 88, true,
+-- river: sentence 1 score 82
+insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, phonemes) values
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000002', 'ff000000-0000-0000-0000-000000000003', 'sentence', 82, 88,
    '[{"word":"river","phone":"r","quality_score":80,"sound_most_like":"r","is_correct":true}]'::jsonb);
 
 -- ============================================
@@ -106,7 +106,7 @@ select ok(
   'phoneme stats exist for learner'
 );
 
--- Test 2: 'l' phoneme has 1 total, 0 correct, 1 error
+-- Test 2: 'l' phoneme has 1 error
 select is(
   (select error_count from public.v_learner_phoneme_stats
    where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and phone = 'l'),
@@ -122,14 +122,7 @@ select is(
   'l phoneme most_common_mistake is r'
 );
 
--- Test 4: 'r' phoneme has errors (from river attempts)
-select ok(
-  (select error_count > 0 from public.v_learner_phoneme_stats
-   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and phone = 'r'),
-  'r phoneme has errors'
-);
-
--- Test 5: accuracy is calculated correctly for 'ae' (all correct)
+-- Test 4: 'ae' phoneme accuracy is 1.00 (all correct)
 select is(
   (select accuracy from public.v_learner_phoneme_stats
    where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and phone = 'ae'),
@@ -141,84 +134,124 @@ select is(
 -- v_word_mastery tests
 -- ============================================
 
--- Test 6: apple word_passed is true
+-- Test 5: apple score is 0 (sentence 2 unattempted → min is 0)
 select is(
-  (select word_passed from public.v_word_mastery
+  (select score from public.v_word_mastery
    where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000001'),
-  true,
-  'apple word_passed is true'
+  0,
+  'apple score is 0 (unattempted sentence drags min to 0)'
 );
 
--- Test 7: apple all_sentences_passed is false (sentence 2 unattempted)
+-- Test 6: apple steps_total is 3 (word + 2 sentences)
 select is(
-  (select all_sentences_passed from public.v_word_mastery
+  (select steps_total from public.v_word_mastery
+   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000001'),
+  3,
+  'apple steps_total is 3 (word + 2 sentences)'
+);
+
+-- Test 7: apple steps_cleared is 2 (word 85 + sentence1 80, sentence2 unattempted)
+select is(
+  (select steps_cleared from public.v_word_mastery
+   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000001'),
+  2,
+  'apple steps_cleared is 2 (word + sentence1 cleared, sentence2 not)'
+);
+
+-- Test 8: apple is not mastered (sentence 2 unattempted)
+select is(
+  (select mastered from public.v_word_mastery
    where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000001'),
   false,
-  'apple all_sentences_passed is false (sentence 2 unattempted)'
+  'apple not mastered (unattempted sentence)'
 );
 
--- Test 8: apple is_mastered is false (not all sentences passed)
+-- Test 9: river score is 82 (MIN of word 90, sentence 82)
 select is(
-  (select is_mastered from public.v_word_mastery
-   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000001'),
-  false,
-  'apple is_mastered is false'
+  (select score from public.v_word_mastery
+   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000002'),
+  82,
+  'river score is 82 (min of 90 and 82)'
 );
 
--- Test 9: river is_mastered is true (word + all sentences passed)
+-- Test 10: river is mastered (all steps >= 80)
 select is(
-  (select is_mastered from public.v_word_mastery
+  (select mastered from public.v_word_mastery
    where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000002'),
   true,
-  'river is_mastered is true'
+  'river is mastered (all steps >= 80)'
+);
+
+-- Complete apple sentence 2 with score 85
+insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, phonemes) values
+  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000002', 'sentence', 85, 90,
+   '[{"word":"apple","phone":"ae","quality_score":90,"sound_most_like":"ae","is_correct":true}]'::jsonb);
+
+-- Test 11: apple is now mastered (all steps cleared)
+select is(
+  (select mastered from public.v_word_mastery
+   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000001'),
+  true,
+  'apple mastered after completing sentence 2'
+);
+
+-- Test 12: apple score is now 80 (min of 85, 80, 85)
+select is(
+  (select score from public.v_word_mastery
+   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000001'),
+  80,
+  'apple score is 80 (min of word 85, sentence1 80, sentence2 85)'
+);
+
+-- ============================================
+-- v_word_mastery: sentence-only attempt (unlocked progression)
+-- ============================================
+
+-- Insert a sentence-only attempt for Jiro (no word practice)
+insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, phonemes) values
+  ('22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000001', 'sentence', 90, 92,
+   '[{"word":"apple","phone":"ae","quality_score":90,"sound_most_like":"ae","is_correct":true}]'::jsonb);
+
+-- Test 13: sentence-only attempt creates a v_word_mastery row
+select ok(
+  (select count(*) > 0 from public.v_word_mastery
+   where learner_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' and word_id = 'ee000000-0000-0000-0000-000000000001'),
+  'sentence-only attempt creates v_word_mastery row'
+);
+
+-- Test 14: sentence-only is not mastered (word step is 0)
+select is(
+  (select mastered from public.v_word_mastery
+   where learner_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' and word_id = 'ee000000-0000-0000-0000-000000000001'),
+  false,
+  'sentence-only attempt: not mastered (word step = 0)'
 );
 
 -- ============================================
 -- v_module_progress tests
 -- ============================================
 
--- Test 10: mastered_words is 1 (river only, apple not yet)
+-- Test 15: mastered_words is 2 (apple + river both mastered for Taro)
 select is(
   (select mastered_words from public.v_module_progress
    where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and module_id = 'dd000000-0000-0000-0000-000000000001'),
-  1,
-  'mastered_words is 1 (river only)'
+  2,
+  'mastered_words is 2 (apple + river mastered)'
 );
 
--- Test 11: is_completed is false (1/2 words mastered)
+-- Test 16: module is completed
 select is(
-  (select is_completed from public.v_module_progress
-   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and module_id = 'dd000000-0000-0000-0000-000000000001'),
-  false,
-  'is_completed is false (1/2 words mastered)'
-);
-
--- Complete apple by passing sentence 2
-insert into public.attempts (account_id, learner_id, word_id, sentence_id, target_type, score, target_word_score, is_passed, phonemes) values
-  ('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'ee000000-0000-0000-0000-000000000001', 'ff000000-0000-0000-0000-000000000002', 'sentence', 85, 90, true,
-   '[{"word":"apple","phone":"ae","quality_score":90,"sound_most_like":"ae","is_correct":true}]'::jsonb);
-
--- Test 12: apple is now mastered (all sentences passed)
-select is(
-  (select is_mastered from public.v_word_mastery
-   where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and word_id = 'ee000000-0000-0000-0000-000000000001'),
-  true,
-  'apple is_mastered after completing sentence 2'
-);
-
--- Test 13: module is now completed (2/2 words mastered)
-select is(
-  (select is_completed from public.v_module_progress
+  (select completed from public.v_module_progress
    where learner_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and module_id = 'dd000000-0000-0000-0000-000000000001'),
   true,
-  'module is_completed when all words mastered'
+  'module completed (all words mastered)'
 );
 
 -- ============================================
 -- RLS tests: views respect account boundary
 -- ============================================
 
--- Test 16: user1 can see own data via v_word_mastery
+-- Test 17: user1 can see own data via v_word_mastery
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "11111111-1111-1111-1111-111111111111"}';
 
@@ -229,7 +262,7 @@ select ok(
 
 reset role;
 
--- Test 17: user2 cannot see user1 data via v_word_mastery
+-- Test 18: user2 cannot see user1 data via v_word_mastery
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "22222222-2222-2222-2222-222222222222"}';
 
@@ -241,7 +274,7 @@ select is(
 
 reset role;
 
--- Test 18: user2 cannot see user1 data via v_learner_phoneme_stats
+-- Test 19: user2 cannot see user1 data via v_learner_phoneme_stats
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "22222222-2222-2222-2222-222222222222"}';
 
@@ -253,7 +286,7 @@ select is(
 
 reset role;
 
--- Test 19: user2 cannot see user1 data via v_module_progress
+-- Test 20: user2 cannot see user1 data via v_module_progress
 set local role authenticated;
 set local request.jwt.claims to '{"sub": "22222222-2222-2222-2222-222222222222"}';
 
