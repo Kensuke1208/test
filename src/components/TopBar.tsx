@@ -45,12 +45,14 @@ export function TopBar() {
               {learnerName ?? "..."}
             </Link>
           )}
-          <Link
-            to="/dashboard"
-            className="text-sm text-gray-500 hover:text-mint-600 font-bold transition-colors"
-          >
-            学習状況
-          </Link>
+          {!selectedLearnerId && (
+            <Link
+              to="/dashboard"
+              className="text-sm text-gray-500 hover:text-mint-600 font-bold transition-colors"
+            >
+              学習状況
+            </Link>
+          )}
           <button
             onClick={handleLogout}
             className="text-sm text-gray-400 hover:text-gray-600 font-bold transition-colors"

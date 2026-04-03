@@ -10,7 +10,6 @@ import { LearnerEditPage } from "./pages/LearnerEditPage";
 import { ModuleListPage } from "./pages/ModuleListPage";
 import { ModuleDetailPage } from "./pages/ModuleDetailPage";
 import { PracticePage } from "./pages/PracticePage";
-import { LearnerDashboardPage } from "./pages/LearnerDashboardPage";
 import { ParentDashboardPage } from "./pages/ParentDashboardPage";
 export const router = createBrowserRouter([
   {
@@ -46,7 +45,7 @@ export const router = createBrowserRouter([
             path: "/modules/:moduleId/words/:wordId",
             element: <PracticePage />,
           },
-          { path: "/learner-dashboard", element: <LearnerDashboardPage /> },
+          { path: "/learner-dashboard", element: <Navigate to="/modules" replace /> },
         ],
       },
     ],
