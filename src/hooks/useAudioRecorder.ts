@@ -85,7 +85,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         }
       }, MAX_RECORDING_MS);
     } catch {
-      setError("マイクのしようをきょかしてね");
+      setError("マイクの使用を許可してね");
     }
   }, []);
 

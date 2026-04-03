@@ -51,7 +51,7 @@ export function MistakeHints({ phonemes, max = 3 }: MistakeHintsProps) {
           <div key={i} className="text-sm">
             <div className="text-gray-700">
               {displayPhone(m.phone)} が {displayPhone(m.sound_most_like)}{" "}
-              にきこえたよ
+              に聞こえたよ
             </div>
             {tip && (
               <div className="text-teal-600 mt-0.5">💡 {tip}</div>

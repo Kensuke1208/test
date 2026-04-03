@@ -108,7 +108,7 @@ export function DevPracticePage() {
 
       {/* Loading */}
       {state === "submitting" && (
-        <div className="text-gray-500">ひょうかちゅう...</div>
+        <div className="text-gray-500">評価中...</div>
       )}
 
       {/* Feedback */}
@@ -129,7 +129,7 @@ export function DevPracticePage() {
                 : "bg-teal-500 hover:bg-teal-600"
             }`}
           >
-            もういちど
+            もう一度
           </button>
         </div>
       )}

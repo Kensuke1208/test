@@ -15,11 +15,11 @@ export function getTierMessage(tier: ScoreTier): string {
     case "excellent":
       return "かんぺき！";
     case "good":
-      return "じょうずにいえたね！";
+      return "上手に言えたね！";
     case "close":
-      return "おしい！ここをなおしてみよう";
+      return "おしい！ここを直してみよう";
     case "retry":
-      return "おてほんをきいてからもういちどいってみよう";
+      return "お手本を聞いてからもう一度言ってみよう";
   }
 }
 

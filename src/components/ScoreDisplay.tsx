@@ -28,11 +28,11 @@ export function ScoreDisplay({
       <div className={`text-5xl font-bold ${tierColors[tier]}`}>{score}</div>
       <div className="text-lg font-bold">{message}</div>
       <div className="text-sm text-gray-600">
-        {total}このおとのうち {correct}こ せいかい
+        {total}この音のうち {correct}こ 正解
       </div>
       {previousCorrectCount !== undefined && previousCorrectCount < correct && (
         <div className="text-sm text-green-600 font-bold">
-          まえは {previousCorrectCount}こ → いまは {correct}こ！
+          前は {previousCorrectCount}こ → 今は {correct}こ！
         </div>
       )}
     </div>
