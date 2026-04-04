@@ -12,8 +12,8 @@
 ## 2. User Stories
 
 As a learner,
-- 自分がどこまで進んだか、プログレスバーで確認したい
-- 次にどの音を練習すればいいか教えてほしい
+- 次にどの単語を練習すればいいか知りたい
+- 自分がどこまで進んだか確認したい
 
 As a parent,
 - 子供がちゃんと練習しているか確認したい
@@ -25,61 +25,62 @@ As a parent,
 
 | ページ | パス | 説明 |
 |--------|------|------|
-| 学習者ダッシュボード | /learner-dashboard | 習得進捗 + 練習推薦 |
+| モジュール一覧（学習者向け拡張） | /modules | 習得進捗 + 練習推薦（モジュール一覧に統合） |
 | 親ダッシュボード | /dashboard | 練習量・成長・苦手ポイント |
 
-## 4. Learner Dashboard
+学習者ダッシュボードは独立ページにしない。子供は自発的にダッシュボードに遷移しないため、練習の導線上（モジュール一覧）に情報を統合する。
+
+## 4. モジュール一覧の拡張（学習者向け）
 
 ### Route
 
-- **Path**: `/learner-dashboard`
+- **Path**: `/modules`
 - **Auth**: 必要
 - **Learner**: 必要
+
+モジュール一覧ページ（既存）の上部に以下を追加する。モジュールカードの表示は変更なし。
 
 ### Data
 
 | Name | Source | Filter |
 |------|--------|--------|
+| modules | modules テーブル | - |
 | moduleProgress | v_module_progress ビュー | learner_id = selectedLearnerId |
-| wordMastery | v_word_mastery ビュー | learner_id = selectedLearnerId, is_mastered = false, LIMIT 5 |
+| wordMastery | v_word_mastery ビュー | learner_id = selectedLearnerId |
 | phonemeStats | v_learner_phoneme_stats ビュー | learner_id = selectedLearnerId |
+| words | words テーブル | - |
 
 ### Components
 
 ```
-LearnerDashboardPage
-├── PageHeader（学習者名 + 戻るボタン）
-├── ProgressSection
-│   ├── ProgressBar（合格単語数 / 全単語数）
-│   └── ModuleProgressList（モジュールごとの進捗サマリー）
-├── RecommendationSection
-│   ├── SectionTitle（「このおとをもうすこしれんしゅうしよう」）
-│   └── RecommendedWordList
-│       └── WordCard（繰り返し、最大 5 件）
-└── StartPracticeButton（「れんしゅうする」→ /modules）
+ModuleListPage
+├── RecommendationCard（次に練習すべき単語1つ）
+├── ProgressSummary（全体の進捗テキスト）
+├── PhonemeHint（苦手な音のヒント、任意）
+└── ModuleList（既存、変更なし）
 ```
 
 ### Business Logic
 
-**練習推薦のロジック**:
+**おすすめ単語の選定**:
 
-1. phonemeStats から accuracy が低い音素を上位 3 つ取得し、苦手音素として表示（「"r" のおとをもうすこしれんしゅうしよう」）
-2. wordMastery で is_mastered = false の単語を、moduleProgress の display_order 順で最大 5 件取得し、「つぎにれんしゅうするたんご」として表示
+1つだけ提示する。5件のリストではなく、1つの明確なアクションを示す。
 
-> Note: 苦手音素を含む未習得単語の推薦は、words テーブルに音素情報がないため実装できない。プロトタイプでは苦手音素の提示と次の未習得単語の提示を分離する。
+- 優先1: 挑戦済みだが未マスターの単語（スコアが合格に最も近いもの）
+- 優先2: まだ挑戦していない最初の単語（表示順）
+- 該当なし: 全マスター時は祝福メッセージ、練習履歴なし時は開始を促すメッセージ
 
-### Interactions
+**苦手な音ヒント**:
 
-- WordCard → /modules/:moduleId/words/:wordId へ遷移
-- StartPracticeButton → /modules へ遷移
-- 戻るボタン → /modules へ遷移
+v_learner_phoneme_stats から正解率が最も低い音素を1つだけ表示。十分なデータ（5回以上）がない場合は非表示。
 
 ### Edge Cases
 
 | ケース | 動作 |
 |--------|------|
-| 練習履歴なし | プログレス 0、「まずはれんしゅうをはじめよう！」メッセージ |
+| 練習履歴なし | 「まずは練習をはじめよう！」メッセージ |
 | 全単語合格済み | 「すべてマスターしました！」メッセージ |
+| 音素データ不足 | ヒントセクション非表示 |
 
 ## 5. Parent Dashboard
 
@@ -95,63 +96,65 @@ LearnerDashboardPage
 |------|--------|--------|
 | learners | learners テーブル | account_id = auth.uid() |
 | weeklyAttempts | attempts テーブル | learner_id = dashboardLearnerId, created_at >= 今週月曜（JST） |
-| lastAttempt | attempts テーブル | learner_id = dashboardLearnerId, ORDER BY created_at DESC, LIMIT 1 |
+| recentAttempts | attempts テーブル | learner_id = dashboardLearnerId, ORDER BY created_at DESC, LIMIT 50 |
 | moduleProgress | v_module_progress ビュー | learner_id = dashboardLearnerId |
 | phonemeStats | v_learner_phoneme_stats ビュー | learner_id = dashboardLearnerId |
+| words | words テーブル | - |
+| modules | modules テーブル | - |
 
 ### Components
 
 ```
 ParentDashboardPage
 ├── PageHeader（「学習状況」）
-├── LearnerSwitcher（子供の切り替えタブ）
-├── PracticeAmountSection
-│   ├── WeeklyCount（「今週の練習回数: 24 回」）
-│   └── LastPracticeDate（「最後に練習した日: 4/2」）
-├── GrowthSection
-│   ├── SectionTitle（「成長」）
-│   └── ModuleProgressTimeline（月ごとのモジュール合格数）
-├── WeakPointSection
-│   ├── SectionTitle（「苦手ポイント」）
-│   └── WeakPhonemeList
-└── BackToLearnersLink（「学習者選択に戻る」）
+├── LearnerSwitcher（横並びピルタブ）
+├── PracticeConsistencySection
+│   ├── WeeklyDots（月〜日、練習した日を塗りつぶし）
+│   ├── DaysCount（「今週 4日 練習した」）
+│   └── LastPracticeDate（「最後の練習: 4/2」）
+├── RecentActivitySection
+│   └── ActivityList（日付 × モジュール単位の練習履歴）
+├── AchievementSection
+│   ├── MasteredWords（マスター単語数 + ProgressBar）
+│   └── CompletedModules（モジュール完了数）
+├── PronunciationSection
+│   ├── StrongPhonemes（得意な音）
+│   └── WeakPhonemes（苦手な音 + 混同パターン）
+└── FooterLink（「学習者の選択にもどる」→ /learners）
 ```
 
 ### Business Logic
 
-**練習量の計算**:
-- 今週の練習回数: weeklyAttempts の件数
-- 最後に練習した日: lastAttempt.created_at を JST で日付表示
+**練習の取り組み**:
+- 曜日ドット（月〜日）で今週の練習リズムを一目で表示
+- 「今週 N日 練習した」で継続性を数値化
+- 最終練習日が3日以上前の場合は警告色で表示
 - 「今週」の定義: JST 月曜 00:00 から
-- タイムゾーン処理: DB の `created_at` は UTC（timestamptz）。クエリで `AT TIME ZONE 'Asia/Tokyo'` を使って JST の週境界を算出する
 
-**成長の表示**:
-- moduleProgress の is_completed = true のモジュール数を表示
-- 月別の推移が必要な場合は、attempts の created_at からアプリ側で算出する（v_module_progress には completed_at がない）
-- プロトタイプでは累計のモジュール合格数のみ表示する
+**最近の練習**:
+- 直近の練習履歴を日付 × モジュール単位でグループ化して表示
+- 各行: 日付 + モジュール名 + 練習単語数 + 合格単語数
+- 最大5日分
 
-**苦手ポイントの表示**:
-- phonemeStats から accuracy が低い音素を上位 3 つ取得
-- 音素→文字表記マッピング（[App Spec](../../app.md#8-phoneme-display-mapping) 参照）で変換
-- 表示: 「"th" の音が苦手です」「"r" と "l" を間違えやすいです」
-- most_common_mistake がある場合は混同パターンも表示
+**達成状況**:
+- マスターした単語数 / 全単語数（ProgressBar）
+- クリアしたモジュール数 / 全モジュール数
+
+**発音の様子**:
+- v_learner_phoneme_stats から得意な音（正解率 80% 以上）と苦手な音（80% 未満）を分けて表示
+- 苦手な音には混同パターンを併記（「→ "s" とまちがえやすい」）
+- 十分なデータ（5回以上）がある音素のみ対象
+- 各最大3つ
 
 **子供の切り替え**:
-- LearnerSwitcher で子供を選択すると dashboardLearnerId を更新
-- dashboardLearnerId は useState で管理（ページローカル。Zustand の selectedLearnerId とは別）
-- 初期値: learners[0].id
-- 切り替え時に Data を refetch
-
-### Interactions
-
-- LearnerSwitcher (On change) → dashboardLearnerId 更新、Data refetch
-- BackToLearnersLink → /learners へ遷移
+- 横並びピルタブで子供を選択。useState で管理（Zustand の selectedLearnerId とは別）
+- 初期値: learners[0]
+- 切り替え時にデータを refetch
 
 ### Edge Cases
 
 | ケース | 動作 |
 |--------|------|
-| 学習者 0 人 | 「学習者を追加してください」+ /learners へのリンク |
-| 練習履歴なし | 各セクション「まだ練習していません」 |
-| phonemeStats が空 | 苦手ポイントセクション「まだデータがありません」 |
-| 全モジュール未完了 | 成長セクション「まだモジュールをクリアしていません」 |
+| 学習者 0 人 | 「学習者を追加してね」+ /learners/new へのリンク |
+| 練習履歴なし | 「まだ練習していません」+ 空の曜日ドット |
+| 音素データなし | 「まだデータがありません」 |

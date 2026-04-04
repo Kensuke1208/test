@@ -35,7 +35,6 @@ App
 | /learners, /learners/* | 必要 | 不要 | /login |
 | /dashboard | 必要 | 不要 | /login |
 | /modules, /modules/* | 必要 | 必要 | /learners |
-| /learner-dashboard | 必要 | 必要 | /learners |
 
 ## 4. Selected Learner
 
