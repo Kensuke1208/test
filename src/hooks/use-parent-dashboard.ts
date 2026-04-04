@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { toModuleProgress } from "../lib/view-types";
-import { PASS_THRESHOLD } from "../lib/score";
 import { getJstMondayUtc, getJstDayOfWeek, formatJstDate } from "../lib/jst-date";
+import { groupRecentActivity, splitPhonemeStats } from "../lib/dashboard";
 
 export function useParentDashboard(learnerId: string | null) {
   return useQuery({
@@ -69,33 +69,8 @@ export function useParentDashboard(learnerId: string | null) {
         );
       }
 
-      // Recent activity grouped by date + module
-      const recentActivity: {
-        date: string;
-        entries: { moduleTitle: string; wordCount: number; passedCount: number }[];
-      }[] = [];
-      const grouped = new Map<string, Map<string, { wordIds: Set<string>; passedWordIds: Set<string> }>>();
-      for (const a of recentRes.data) {
-        const dateKey = formatJstDate(a.created_at);
-        const moduleTitle = wordModuleMap.get(a.word_id) ?? "不明";
-
-        if (!grouped.has(dateKey)) grouped.set(dateKey, new Map());
-        const dateMap = grouped.get(dateKey)!;
-        if (!dateMap.has(moduleTitle))
-          dateMap.set(moduleTitle, { wordIds: new Set(), passedWordIds: new Set() });
-        const entry = dateMap.get(moduleTitle)!;
-        entry.wordIds.add(a.word_id);
-        if (a.score >= PASS_THRESHOLD) entry.passedWordIds.add(a.word_id);
-      }
-      for (const [date, moduleEntries] of grouped) {
-        const entries = [...moduleEntries.entries()].map(([moduleTitle, data]) => ({
-          moduleTitle,
-          wordCount: data.wordIds.size,
-          passedCount: data.passedWordIds.size,
-        }));
-        recentActivity.push({ date, entries });
-      }
-      recentActivity.splice(5);
+      // Recent activity
+      const recentActivity = groupRecentActivity(recentRes.data, wordModuleMap);
 
       // Module progress totals
       const progressList = (progressRes.data ?? []).map(toModuleProgress);
@@ -104,20 +79,14 @@ export function useParentDashboard(learnerId: string | null) {
       const completedModules = progressList.filter((p) => p.completed).length;
       const totalModules = progressList.length;
 
-      // Phoneme stats: filter, sort client-side, split into weak/strong
-      const allPhonemes = (phonemeRes.data ?? [])
-        .filter((p) => (p.total_count ?? 0) >= 5)
-        .sort((a, b) => Number(a.accuracy) - Number(b.accuracy))
-        .map((p) => ({
-          phone: p.phone as string,
-          accuracy: Number(p.accuracy),
-          mostCommonMistake: p.most_common_mistake as string | null,
-        }));
-      const weakPhonemes = allPhonemes.filter((p) => p.accuracy < 0.8).slice(0, 3);
-      const strongPhonemes = allPhonemes
-        .filter((p) => p.accuracy >= 0.8)
-        .reverse()
-        .slice(0, 3);
+      // Phoneme stats
+      const phonemeRows = (phonemeRes.data ?? []).map((p) => ({
+        phone: p.phone as string,
+        accuracy: Number(p.accuracy),
+        totalCount: p.total_count ?? 0,
+        mostCommonMistake: p.most_common_mistake as string | null,
+      }));
+      const { weak: weakPhonemes, strong: strongPhonemes } = splitPhonemeStats(phonemeRows);
 
       return {
         practiceDays,

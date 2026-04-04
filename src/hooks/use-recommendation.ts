@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
+import {
+  pickRecommendation,
+  pickWeakestPhoneme,
+  type RecommendedWord,
+  type WeakestPhoneme,
+} from "../lib/recommendation";
 
-interface RecommendedWord {
-  wordId: string;
-  moduleId: string;
-  text: string;
-  meaningJa: string;
-  score: number;
-}
+export type { RecommendedWord, WeakestPhoneme };
 
 export function useRecommendation(learnerId: string | null) {
   return useQuery({
@@ -49,69 +49,43 @@ export function useRecommendation(learnerId: string | null) {
       const totalWords = progressList.reduce((s, p) => s + (p.total_words ?? 0), 0);
       const masteredWords = progressList.reduce((s, p) => s + (p.mastered_words ?? 0), 0);
 
-      // Build word lookup
+      // Sort words by module order then word order
       const moduleOrderMap = new Map(
         (modulesRes.data ?? []).map((m) => [m.id, m.display_order]),
       );
-      const wordList = (wordsRes.data ?? []).sort((a, b) => {
-        const aModOrder = moduleOrderMap.get(a.module_id) ?? 0;
-        const bModOrder = moduleOrderMap.get(b.module_id) ?? 0;
-        if (aModOrder !== bModOrder) return aModOrder - bModOrder;
-        return a.display_order - b.display_order;
-      });
-      const wordMap = new Map(wordList.map((w) => [w.id, w]));
+      const wordList = (wordsRes.data ?? [])
+        .sort((a, b) => {
+          const aModOrder = moduleOrderMap.get(a.module_id) ?? 0;
+          const bModOrder = moduleOrderMap.get(b.module_id) ?? 0;
+          if (aModOrder !== bModOrder) return aModOrder - bModOrder;
+          return a.display_order - b.display_order;
+        })
+        .map((w) => ({
+          id: w.id,
+          module_id: w.module_id,
+          text: w.text,
+          meaning_ja: w.meaning_ja,
+        }));
 
-      // Find recommended word
-      let recommended: RecommendedWord | null = null;
-      const mastery = masteryRes.data ?? [];
+      // Mastery rows
+      const mastery = (masteryRes.data ?? [])
+        .filter((m): m is typeof m & { word_id: string } => m.word_id !== null)
+        .map((m) => ({
+          word_id: m.word_id,
+          score: m.score ?? 0,
+          mastered: m.mastered ?? false,
+        }));
 
-      // Priority 1: attempted but not mastered (score > 0) — "almost there"
-      const almostThere = mastery
-        .filter((m) => !m.mastered && (m.score ?? 0) > 0)
-        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+      const recommended = pickRecommendation(mastery, wordList, masteredWords, totalWords);
 
-      const candidate = almostThere[0];
-      if (candidate?.word_id) {
-        const word = wordMap.get(candidate.word_id);
-        if (word) {
-          recommended = {
-            wordId: word.id,
-            moduleId: word.module_id,
-            text: word.text,
-            meaningJa: word.meaning_ja,
-            score: candidate.score ?? 0,
-          };
-        }
-      }
-
-      // Priority 2: first unattempted word
-      if (!recommended && masteredWords < totalWords) {
-        const attemptedWordIds = new Set(
-          mastery.map((m) => m.word_id).filter(Boolean),
-        );
-        const unattempted = wordList.find((w) => !attemptedWordIds.has(w.id));
-        if (unattempted) {
-          recommended = {
-            wordId: unattempted.id,
-            moduleId: unattempted.module_id,
-            text: unattempted.text,
-            meaningJa: unattempted.meaning_ja,
-            score: 0,
-          };
-        }
-      }
-
-      // Weakest phoneme (with enough data)
-      const qualified = (phonemeRes.data ?? [])
-        .filter((p) => (p.total_count ?? 0) >= 5)
-        .sort((a, b) => Number(a.accuracy) - Number(b.accuracy));
-      const weakestPhoneme = qualified[0]
-        ? {
-            phone: qualified[0].phone as string,
-            accuracy: Number(qualified[0].accuracy),
-            mostCommonMistake: qualified[0].most_common_mistake as string | null,
-          }
-        : null;
+      // Phoneme stats
+      const phonemeRows = (phonemeRes.data ?? []).map((p) => ({
+        phone: p.phone as string,
+        accuracy: Number(p.accuracy),
+        totalCount: p.total_count ?? 0,
+        mostCommonMistake: p.most_common_mistake as string | null,
+      }));
+      const weakestPhoneme = pickWeakestPhoneme(phonemeRows);
 
       return {
         recommended,
