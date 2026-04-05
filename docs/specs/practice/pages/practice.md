@@ -128,7 +128,7 @@ v_word_mastery は未挑戦の単語を返さないため、フロント側で w
 |------|--------|--------|
 | word | words テーブル | id = wordId |
 | sentences | sentences テーブル | word_id = wordId, ORDER BY display_order |
-| pastAttempts | attempts テーブル | learner_id = selectedLearnerId, word_id = wordId, is_passed = true |
+| pastAttempts | attempts テーブル | learner_id = selectedLearnerId, word_id = wordId |
 
 ### Components
 
